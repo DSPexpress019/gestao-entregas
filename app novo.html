@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Entregas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            yellow: '#EAB308',
+                            darkBg: '#0F1012',
+                            cardBg: 'rgba(30, 30, 32, 0.75)',
+                            cardHover: '#2A2A2E',
+                            accent: '#CA8A04'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts (Inter) & FontAwesome & Chart.js & SheetJS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Manifesto PWA com Ícone de Caixa 📦 -->
+    <link rel="manifest" href='data:application/manifest+json,{"name": "Gestão de Entregas", "short_name": "Entregas", "start_url": "./", "display": "standalone", "background_color": "#0F1012", "theme_color": "#EAB308", "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/679/679922.png", "sizes": "512x512", "type": "image/png"}]}'>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            word-break: break-word;
+        }
+        body.light {
+            background-color: #f4f5f7 !important;
+            color: #111827 !important;
+        }
+        body.light .bg-brand-cardBg {
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            border-color: #e2e8f0 !important;
+        }
+        body.light .bg-gray-900 {
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #111827 !important;
+        }
+        body.light .bg-gray-800 {
+            background-color: #edf2f7 !important;
+            color: #111827 !important;
+        }
+        body.light .text-white {
+            color: #111827 !important;
+        }
+        body.light header, body.light nav {
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            border-color: #e2e8f0 !important;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #sidebar-menu {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab-content {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .glass-card {
+            background: rgba(30, 30, 35, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        body.light .glass-card {
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+    </style>
+</head>
+<body id="body-app" class="bg-brand-darkBg text-gray-100 min-h-screen pb-28 flex flex-col transition-colors duration-200">
+
+    <!-- OVERLAY DE BLOQUEIO POR PIN -->
+    <div id="pin-lock-screen" class="fixed inset-0 bg-brand-darkBg z-50 flex flex-col items-center justify-center p-6 hidden">
+        <div class="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-3xl font-bold mb-4 animate-bounce shadow-lg shadow-amber-500/10">
+            <i class="fa-solid fa-lock"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white mb-1">Gestão de Entregas</h2>
+        <p class="text-xs text-gray-400 mb-6">Digite seu PIN de 4 dígitos para acessar</p>
+        
+        <div class="flex gap-3 mb-6">
+            <input type="password" maxlength="1" id="pin-1" onkeyup="movePinFocus(1)" class="w-12 h-14 bg-gray-800 border border-gray-700 rounded-2xl text-center text-2xl font-bold text-amber-400 focus:outline-none focus:border-amber-500 transition-all shadow-inner">
+            <input type="password" maxlength="1" id="pin-2" onkeyup="movePinFocus(2)" class="w-12 h-14 bg-gray-800 border border-gray-700 rounded-2xl text-center text-2xl font-bold text-amber-400 focus:outline-none focus:border-amber-500 transition-all shadow-inner">
+            <input type="password" maxlength="1" id="pin-3" onkeyup="movePinFocus(3)" class="w-12 h-14 bg-gray-800 border border-gray-700 rounded-2xl text-center text-2xl font-bold text-amber-400 focus:outline-none focus:border-amber-500 transition-all shadow-inner">
+            <input type="password" maxlength="1" id="pin-4" onkeyup="movePinFocus(4)" class="w-12 h-14 bg-gray-800 border border-gray-700 rounded-2xl text-center text-2xl font-bold text-amber-400 focus:outline-none focus:border-amber-500 transition-all shadow-inner">
+        </div>
+        
+        <button onclick="validarPinEntrada()" class="w-full max-w-xs btn-gradient hover:opacity-90 text-black font-extrabold py-3.5 rounded-2xl transition mb-3 shadow-lg shadow-amber-500/20">
+            Entrar
+        </button>
+        <button onclick="resetarPinEsquecido()" class="text-xs text-amber-400 hover:underline">
+            Esqueceu o PIN? Resetar senha
+        </button>
+    </div>
+
+    <!-- MENU LATERAL DESLIZANTE (SIDEBAR) -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/70 z-50 hidden backdrop-blur-sm transition-opacity" onclick="toggleSidebar()"></div>
+    <div id="sidebar-menu" class="fixed top-0 left-0 bottom-0 w-72 glass-card border-r border-gray-800 z-50 transform -translate-x-full flex flex-col p-4 space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center border-b border-gray-800/80 pb-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-600/20 text-amber-400 flex items-center justify-center font-bold text-sm border border-amber-500/30">
+                    <i class="fa-solid fa-box"></i>
+                </div>
+                <div>
+                    <h2 class="text-xs font-bold text-white leading-tight">Gestão de Entregas</h2>
+                    <p class="text-[9px] text-gray-400">Menu Rápido Pro</p>
+                </div>
+            </div>
+            <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white p-1.5 rounded-xl hover:bg-gray-800/50 transition"><i class="fa-solid fa-xmark text-base"></i></button>
+        </div>
+
+        <div class="bg-gray-900/80 p-3 rounded-xl border border-gray-800 space-y-1.5 shadow-inner">
+            <label class="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-calendar-alt"></i> Filtrar por Mês
+            </label>
+            <input type="month" id="filtro-mes-rapido" onchange="filtrarPorMesSidebar(this.value)" class="w-full bg-gray-800 border border-gray-700/80 rounded-lg p-1.5 text-white text-xs">
+            <button onclick="limparFiltroMes()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium text-[10px] py-1.5 rounded-lg transition">
+                Mostrar Todo o Período
+            </button>
+        </div>
+
+        <div class="space-y-1 flex-1">
+            <span class="text-[9px] uppercase tracking-wider text-gray-500 font-bold block mb-1 px-1">Atalhos</span>
+            <button onclick="toggleSidebar(); switchTab('dashboard')" class="w-full text-left p-2.5 rounded-xl text-xs hover:bg-gray-800/80 text-gray-300 flex items-center gap-2.5 transition">
+                <i class="fa-solid fa-chart-pie text-amber-400 w-4 text-xs"></i> Painel Geral
+            </button>
+            <button onclick="toggleSidebar(); switchTab('pacotes')" class="w-full text-left p-2.5 rounded-xl text-xs hover:bg-gray-800/80 text-gray-300 flex items-center gap-2.5 transition">
+                <i class="fa-solid fa-box text-amber-400 w-4 text-xs"></i> Registar Entregas
+            </button>
+            <button onclick="toggleSidebar(); switchTab('quinzena')" class="w-full text-left p-2.5 rounded-xl text-xs hover:bg-gray-800/80 text-gray-300 flex items-center gap-2.5 transition">
+                <i class="fa-solid fa-calendar-days text-amber-400 w-4 text-xs"></i> Fechamento Quinzenal
+            </button>
+            <button onclick="toggleSidebar(); switchTab('calculadora')" class="w-full text-left p-2.5 rounded-xl text-xs hover:bg-gray-800/80 text-gray-300 flex items-center gap-2.5 transition">
+                <i class="fa-solid fa-calculator text-amber-400 w-4 text-xs"></i> Calculadora de Taxas e KM
+            </button>
+            <button onclick="toggleSidebar(); switchTab('perfil')" class="w-full text-left p-2.5 rounded-xl text-xs hover:bg-gray-800/80 text-gray-300 flex items-center gap-2.5 transition">
+                <i class="fa-solid fa-id-card text-amber-400 w-4 text-xs"></i> Meu Perfil & Moto
+            </button>
+        </div>
+
+        <div class="border-t border-gray-800/80 pt-2.5">
+            <button onclick="exportData()" class="w-full bg-gray-800/80 hover:bg-gray-700 text-gray-300 text-xs font-semibold py-2 rounded-xl transition flex items-center justify-center gap-2 shadow-sm">
+                <i class="fa-solid fa-download"></i> Baixar Backup JSON
+            </button>
+        </div>
+    </div>
+
+    <!-- Top Header Compacto com Vidro Fosco -->
+    <header class="glass-card border-b border-gray-800/80 px-3 py-2 sticky top-0 z-40 flex justify-between items-center shadow-md backdrop-blur-md">
+        <div class="flex items-center gap-2">
+            <button onclick="toggleSidebar()" class="text-amber-400 bg-amber-500/10 p-2 rounded-xl hover:bg-amber-500/20 transition text-sm border border-amber-500/20" title="Abrir Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-600/20 text-amber-400 flex items-center justify-center font-bold text-sm border border-amber-500/30 animate-pulse">
+                <i class="fa-solid fa-box"></i>
+            </div>
+            <div>
+                <h1 class="text-xs font-bold text-white leading-tight">Gestão de Entregas</h1>
+                <p class="text-[9px] text-gray-400">Controlo Financeiro Pro</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+            <button onclick="togglePrivacidade()" id="btn-privacidade" class="p-2 text-gray-300 bg-gray-800/80 rounded-xl hover:bg-gray-700 transition text-xs border border-gray-700" title="Ocultar Valores">
+                <i id="icone-privacidade" class="fa-solid fa-eye text-xs"></i>
+            </button>
+            <button onclick="toggleTema()" id="btn-tema-toggle" class="p-2 text-amber-400 bg-amber-500/10 rounded-xl hover:bg-amber-500/20 transition text-xs border border-amber-500/20" title="Alternar Tema">
+                <i id="icone-tema" class="fa-solid fa-sun text-sm"></i>
+            </button>
+            <button onclick="exportarExcelWhatsApp()" class="p-2 text-green-400 bg-green-500/10 rounded-xl hover:bg-green-500/20 transition text-xs flex items-center gap-1 font-semibold border border-green-500/20" title="Exportar XLSX">
+                <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Excel</span>
+            </button>
+            <button onclick="abrirModalTransportadoras()" class="p-2 text-amber-400 bg-amber-500/10 rounded-xl hover:bg-amber-500/20 transition text-xs flex items-center gap-1 font-semibold border border-amber-500/20" title="Gerir Transportadoras">
+                <i class="fa-solid fa-building"></i> <span class="hidden sm:inline">Empresas</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Barra de Filtros Globais Compacta -->
+    <div class="glass-card border-b border-gray-800/80 px-3 py-2 max-w-lg mx-auto w-full sticky top-[53px] z-30 backdrop-blur-md">
+        <div class="grid grid-cols-3 gap-1.5 text-xs">
+            <div>
+                <label class="text-[9px] text-gray-400 block mb-0.5">Início</label>
+                <input type="date" id="filtro-data-inicio" onchange="aplicarFiltrosGlobais()" class="w-full bg-gray-900 border border-gray-700/80 rounded-lg p-1.5 text-white text-[11px]">
+            </div>
+            <div>
+                <label class="text-[9px] text-gray-400 block mb-0.5">Fim</label>
+                <input type="date" id="filtro-data-fim" onchange="aplicarFiltrosGlobais()" class="w-full bg-gray-900 border border-gray-700/80 rounded-lg p-1.5 text-white text-[11px]">
+            </div>
+            <div>
+                <label class="text-[9px] text-gray-400 block mb-0.5">Transportadora</label>
+                <select id="filtro-transportadora" onchange="aplicarFiltrosGlobais()" class="w-full bg-gray-900 border border-gray-700/80 rounded-lg p-1.5 text-white text-[11px]">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-lg mx-auto w-full p-3 space-y-4">
+
+        <!-- ABA 1: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-content space-y-3">
+            <div class="grid grid-cols-2 gap-2.5">
+                <div class="glass-card p-3 rounded-2xl border border-green-500/20 shadow-sm transition-all relative overflow-hidden">
+                    <span class="text-[11px] text-gray-400 block mb-0.5 font-medium">Ganhos Filtrados</span>
+                    <span id="dash-ganhos" class="text-base sm:text-lg font-extrabold text-green-400 val-privado">R$ 0,00</span>
+                </div>
+                <div class="glass-card p-3 rounded-2xl border border-red-500/20 shadow-sm transition-all relative overflow-hidden">
+                    <span class="text-[11px] text-gray-400 block mb-0.5 font-medium">Gastos da Moto</span>
+                    <span id="dash-gastos-moto" class="text-base sm:text-lg font-extrabold text-red-400 val-privado">R$ 0,00</span>
+                </div>
+                <div class="glass-card p-3 rounded-2xl border border-amber-500/30 shadow-sm transition-all relative overflow-hidden">
+                    <span class="text-[11px] text-gray-400 block mb-0.5 font-medium">Lucro Líquido Moto</span>
+                    <span id="dash-lucro" class="text-base sm:text-lg font-extrabold text-amber-400 val-privado">R$ 0,00</span>
+                </div>
+                <div class="glass-card p-3 rounded-2xl border border-blue-500/20 shadow-sm transition-all relative overflow-hidden">
+                    <span class="text-[11px] text-gray-400 block mb-0.5 font-medium">Gastos Pessoais</span>
+                    <span id="dash-gastos-pessoal" class="text-base sm:text-lg font-extrabold text-blue-400 val-privado">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm space-y-2.5">
+                <h3 class="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                    <span>Ranking por Transportadora</span>
+                    <i class="fa-solid fa-chart-pie text-amber-400"></i>
+                </h3>
+                <div id="resumo-transportadoras-list" class="space-y-2"></div>
+            </div>
+
+            <div class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm">
+                <h3 class="text-xs font-semibold text-gray-300 mb-2.5 flex items-center justify-between">
+                    <span>Evolução dos Ganhos</span>
+                    <i class="fa-solid fa-chart-line text-amber-400"></i>
+                </h3>
+                <div class="h-44 relative">
+                    <canvas id="financeChart"></canvas>
+                </div>
+            </div>
+
+            <div id="card-meta-container" class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-gray-400 font-medium">Meta Geral (Mês Atual)</span>
+                    <span id="meta-text" class="font-extrabold text-amber-400 val-privado">R$ 0 / R$ 4.000</span>
+                </div>
+                <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-gray-700/50">
+                    <div id="meta-bar" class="btn-gradient h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ABA 2: REGISTO DE PACOTES / DIÁRIA -->
+        <section id="tab-pacotes" class="tab-content space-y-3.5 hidden">
+            <div class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm space-y-2.5">
+                <h3 class="font-bold text-amber-400 flex items-center gap-2 text-xs">
+                    <i class="fa-solid fa-box font-bold"></i> Lançamento Diário de Entregas
+                </h3>
+                <form id="form-pacote" onsubmit="salvarDiaria(event)" class="space-y-2.5">
+                    <div>
+                        <label class="text-[11px] text-gray-400">Transportadora / Operação</label>
+                        <select id="pacote-transportadora" required class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs transition-all"></select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400">Data da Operação</label>
+                        <input type="date" id="pacote-data" required class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[11px] text-gray-400">Qtd. Pacotes</label>
+                            <input type="number" id="pacote-qtd" required placeholder="Ex: 50" oninput="calcularTotalDiario()" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400">Valor / Pacote (R$)</label>
+                            <input type="number" step="0.01" id="pacote-valor" value="3.10" required oninput="calcularTotalDiario()" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400">Ganho Calculado do Dia</label>
+                        <input type="text" id="pacote-total-preview" readonly value="R$ 0,00" class="w-full bg-gray-800 text-amber-400 font-extrabold border border-gray-700/80 rounded-xl p-2 text-xs val-privado">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400">Estado de Pagamento</label>
+                        <select id="pacote-status" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                            <option value="Pendente">Pendente</option>
+                            <option value="Pago">Pago</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full btn-gradient hover:opacity-90 text-black font-extrabold py-2.5 rounded-xl text-xs transition shadow-lg shadow-amber-500/20">
+                        Guardar Diária de Entregas
+                    </button>
+                </form>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-gray-800 shadow-sm overflow-hidden">
+                <div class="p-3 bg-gray-900 border-b border-gray-800 font-bold text-xs text-gray-300 flex justify-between items-center">
+                    <span>Histórico Filtrado</span>
+                    <span id="contador-historico" class="text-[11px] text-gray-400">0 registos</span>
+                </div>
+                <div id="tabela-diarias" class="divide-y divide-gray-800/80 text-xs"></div>
+            </div>
+        </section>
+
+        <!-- ABA 3: FINANÇAS -->
+        <section id="tab-financas" class="tab-content space-y-3.5 hidden">
+            <div class="grid grid-cols-2 gap-2.5">
+                <div class="glass-card p-3.5 rounded-2xl border border-green-500/30 shadow-sm">
+                    <span class="text-[11px] text-gray-400 block mb-0.5 font-medium">Total Já Recebido (Pago)</span>
+                    <span id="financas-total-pago" class="text-base sm:text-lg font-extrabold text-green-400 val-privado">R$ 0,00</span>
+                </div>
+                <div class="glass-card p-3.5 rounded-2xl border border-red-500/30 shadow-sm">
+                    <span class="text-[11px] text-gray-400 block mb-0.5 font-medium">Total A Receber (Pendente)</span>
+                    <span id="financas-total-pendente" class="text-base sm:text-lg font-extrabold text-red-400 val-privado">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-gray-800 shadow-sm overflow-hidden">
+                <div class="p-3 bg-gray-900 border-b border-gray-800 font-bold text-xs text-gray-300 flex justify-between items-center">
+                    <span>Controlo por Transportadora</span>
+                    <span class="text-[11px] text-amber-400">Resumo por Empresa</span>
+                </div>
+                <div id="tabela-financas-agrupadas" class="divide-y divide-gray-800/80 text-xs"></div>
+            </div>
+        </section>
+
+        <!-- ABA 4: GASTOS & HISTÓRICO DE COMBUSTÍVEL -->
+        <section id="tab-gastos" class="tab-content space-y-3.5 hidden">
+            
+            <div class="glass-card p-3.5 rounded-2xl border border-amber-500/30 shadow-sm space-y-1.5 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-bl-full pointer-events-none"></div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-gas-pump"></i> Desempenho do Combustível (Real)
+                    </span>
+                    <span id="gas-media-kml" class="text-sm font-extrabold text-green-400">-- KM/L</span>
+                </div>
+                <p class="text-[10px] text-gray-400 leading-relaxed" id="gas-info-resumo">Abasteça e registre a KM Atual e os Litros para calcular automaticamente o consumo médio real da sua moto.</p>
+            </div>
+
+            <div class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm space-y-3">
+                <div class="flex border-b border-gray-800">
+                    <button onclick="setGastoTipo('moto')" id="btn-gasto-moto" class="flex-1 pb-2 font-bold text-center border-b-2 border-amber-400 text-amber-400 transition-all text-xs">
+                        <i class="fa-solid fa-motorcycle mr-1"></i> Gastos Moto
+                    </button>
+                    <button onclick="setGastoTipo('pessoal')" id="btn-gasto-pessoal" class="flex-1 pb-2 font-bold text-center text-gray-500 transition-all text-xs">
+                        <i class="fa-solid fa-house mr-1"></i> Gastos Pessoais
+                    </button>
+                </div>
+
+                <form id="form-gasto" onsubmit="salvarGasto(event)" class="space-y-2.5">
+                    <input type="hidden" id="gasto-id" value="">
+                    <input type="hidden" id="gasto-tipo" value="moto">
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">Categoria</label>
+                        <div id="cat-moto" class="grid grid-cols-3 gap-1.5">
+                            <button type="button" onclick="selectCat(this, 'Combustível')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-amber-500 text-white text-center transition font-medium">Combustível</button>
+                            <button type="button" onclick="selectCat(this, 'Óleo')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Óleo</button>
+                            <button type="button" onclick="selectCat(this, 'Relação')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Relação</button>
+                            <button type="button" onclick="selectCat(this, 'Pneus')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Pneus</button>
+                            <button type="button" onclick="selectCat(this, 'Manutenção')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Manutenção</button>
+                            <button type="button" onclick="selectCat(this, 'Outro')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Outro</button>
+                        </div>
+                        <div id="cat-pessoal" class="grid grid-cols-3 gap-1.5 hidden">
+                            <button type="button" onclick="selectCat(this, 'Aluguer')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-amber-500 text-white text-center transition font-medium">Aluguer</button>
+                            <button type="button" onclick="selectCat(this, 'Energia')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Energia</button>
+                            <button type="button" onclick="selectCat(this, 'Água')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Água</button>
+                            <button type="button" onclick="selectCat(this, 'Internet')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Internet</button>
+                            <button type="button" onclick="selectCat(this, 'Despesas Pessoais')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Pessoais</button>
+                            <button type="button" onclick="selectCat(this, 'Outro')" class="cat-btn p-2 text-[11px] bg-gray-800/80 rounded-xl border border-gray-700 text-gray-400 text-center transition font-medium">Outro</button>
+                        </div>
+                        <input type="hidden" id="gasto-categoria" value="Combustível">
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] text-gray-400">Valor (R$)</label>
+                        <input type="number" step="0.01" id="gasto-valor" required placeholder="0,00" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+
+                    <div id="campo-km" class="space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[11px] text-gray-400">Litros (opcional)</label>
+                                <input type="number" step="0.01" id="gasto-litros" placeholder="0.0" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                            </div>
+                            <div>
+                                <label class="text-[11px] text-gray-400">KM Atual (opcional)</label>
+                                <input type="number" id="gasto-km" placeholder="Ex: 45000" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] text-gray-400">Data</label>
+                        <input type="date" id="gasto-data" required class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button type="submit" id="btn-submit-gasto" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-extrabold py-2.5 rounded-xl text-xs transition shadow-md shadow-red-600/20">
+                            Registar Despesa
+                        </button>
+                        <button type="button" id="btn-cancelar-gasto" onclick="limparFormularioGasto()" class="hidden bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold px-3 rounded-xl text-xs transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-gray-800 shadow-sm overflow-hidden">
+                <div class="p-3 bg-gray-900 border-b border-gray-800 font-bold text-xs text-gray-300 flex justify-between items-center">
+                    <span>Histórico de Despesas</span>
+                    <span id="contador-gastos" class="text-[11px] text-gray-400">0 registos</span>
+                </div>
+                <div id="tabela-gastos" class="divide-y divide-gray-800/80 text-xs"></div>
+            </div>
+        </section>
+
+        <!-- ABA 5: CALCULADORA DE TAXAS E KM -->
+        <section id="tab-calculadora" class="tab-content space-y-3.5 hidden">
+            <div class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm space-y-3">
+                <h3 class="font-bold text-amber-400 flex items-center gap-2 text-xs">
+                    <i class="fa-solid fa-calculator"></i> Calculadora de Lucro por Corrida
+                </h3>
+                
+                <div class="space-y-2.5">
+                    <div>
+                        <label class="text-[11px] text-gray-400">Preço da Gasolina (R$/Litro)</label>
+                        <input type="number" step="0.01" id="calc-preco-combustivel" value="5.89" oninput="calcularCustoKM()" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400">Consumo da Moto (KM / Litro)</label>
+                        <input type="number" step="0.1" id="calc-km-litro" value="35.0" oninput="calcularCustoKM()" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+                    <div class="p-2.5 bg-gray-900 rounded-xl border border-gray-800 flex justify-between items-center shadow-inner">
+                        <span class="text-[11px] text-gray-400">Custo estimado por KM:</span>
+                        <span id="custo-por-km" class="text-xs font-extrabold text-amber-400">R$ 0,17 / km</span>
+                    </div>
+
+                    <hr class="border-gray-800/80 my-1">
+
+                    <div>
+                        <label class="text-[11px] text-gray-400">Valor Oferecido na Corrida (R$)</label>
+                        <input type="number" step="0.01" id="calc-valor-corrida" placeholder="Ex: 15.00" oninput="calcularViabilidadeCorrida()" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400">Distância Total (Ida + Volta em KM)</label>
+                        <input type="number" step="0.1" id="calc-km-corrida" placeholder="Ex: 8.5" oninput="calcularViabilidadeCorrida()" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+
+                    <div id="resultado-corrida" class="p-2.5 bg-gray-900 rounded-xl border border-gray-800 space-y-1 shadow-inner text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Custo do Combustível:</span>
+                            <span id="res-custo" class="text-red-400 font-extrabold val-privado">R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between pt-1 border-t border-gray-800">
+                            <span class="text-gray-300 font-bold">Lucro Real Estimado:</span>
+                            <span id="res-lucro" class="text-green-400 font-extrabold val-privado">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ABA 6: FECHAMENTO QUINZENAL -->
+        <section id="tab-quinzena" class="tab-content space-y-3.5 hidden">
+            <div class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm space-y-2.5">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-amber-400 flex items-center gap-1 text-xs">
+                        <i class="fa-solid fa-calendar-days mr-1"></i> Fechamento Quinzenal
+                    </h3>
+                    <button onclick="alternarFiltroPendentes()" id="btn-filtro-pendente" class="text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40 px-2.5 py-1 rounded-xl font-bold transition">
+                        Ver Apenas Pendentes
+                    </button>
+                </div>
+                <p class="text-[10px] text-gray-400">Lance bônus ou descontos PNR. Use o ícone de <i class="fa-brands fa-whatsapp text-green-400"></i> para enviar o resumo rápido no WhatsApp.</p>
+
+                <div class="p-2.5 bg-gray-900 rounded-xl border border-gray-800 space-y-2 shadow-inner text-xs">
+                    <h4 class="font-bold text-white text-[11px]">Lançar / Atualizar Ajuste (Bônus / PNR)</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[9px] text-gray-400">Período / Quinzena</label>
+                            <select id="ajuste-periodo" class="w-full bg-gray-800 border border-gray-700/80 rounded-lg p-1.5 text-white text-[11px]"></select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-gray-400">Transportadora</label>
+                            <select id="ajuste-transportadora" class="w-full bg-gray-800 border border-gray-700/80 rounded-lg p-1.5 text-white text-[11px]"></select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[9px] text-green-400">Bônus (R$)</label>
+                            <input type="number" step="0.01" id="ajuste-bonus" value="0.00" class="w-full bg-gray-800 border border-gray-700/80 rounded-lg p-1.5 text-white text-[11px]">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-red-400">Desconto PNR (R$)</label>
+                            <input type="number" step="0.01" id="ajuste-desconto" value="0.00" class="w-full bg-gray-800 border border-gray-700/80 rounded-lg p-1.5 text-white text-[11px]">
+                        </div>
+                    </div>
+                    <button onclick="salvarAjusteQuinzena()" class="w-full btn-gradient hover:opacity-90 text-black font-extrabold text-[11px] py-2 rounded-xl transition shadow-md shadow-amber-500/20">
+                        Salvar Ajuste na Quinzena
+                    </button>
+                </div>
+
+                <div id="tabela-quinzenal" class="divide-y divide-gray-800/80 text-xs"></div>
+            </div>
+        </section>
+
+        <!-- ABA 7: PERFIL DO CONDUTOR & SISTEMA -->
+        <section id="tab-perfil" class="tab-content space-y-3.5 hidden">
+            <div class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm space-y-3">
+                <h3 class="font-bold text-amber-400 flex items-center gap-2 text-xs">
+                    <i class="fa-solid fa-id-card"></i> Meu Perfil & Moto
+                </h3>
+                <p class="text-[11px] text-gray-400">Guarde as suas informações de contacto e dados da sua motocicleta.</p>
+
+                <div class="space-y-2.5 text-xs">
+                    <div>
+                        <label class="text-[11px] text-gray-400">Nome Completo</label>
+                        <input type="text" id="perfil-nome" placeholder="Ex: Denilson Pissona" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400">Telemóvel / WhatsApp</label>
+                        <input type="text" id="perfil-telefone" placeholder="Ex: (11) 99999-9999" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[11px] text-gray-400">Modelo da Moto</label>
+                            <input type="text" id="perfil-moto" placeholder="Ex: Yamaha Factor 150" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400">Placa</label>
+                            <input type="text" id="perfil-placa" placeholder="Ex: ABC-1234" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                        </div>
+                    </div>
+                    <button onclick="salvarPerfil()" class="w-full btn-gradient hover:opacity-90 text-black font-extrabold text-xs py-2.5 rounded-xl transition shadow-md shadow-amber-500/20">
+                        Guardar Perfil
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ajustes & Instalação -->
+            <div class="glass-card p-3.5 rounded-2xl border border-gray-800 shadow-sm space-y-3 text-xs">
+                <h3 class="font-bold text-amber-400 flex items-center gap-2 text-xs">
+                    <i class="fa-solid fa-gear"></i> Sistema & Segurança
+                </h3>
+
+                <div class="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/30 space-y-1.5 text-center">
+                    <h4 class="text-[11px] font-bold text-amber-400">Instalar Aplicativo no Telemóvel</h4>
+                    <button onclick="instalarAppPWA()" id="btn-instalar-app" class="w-full btn-gradient hover:opacity-90 text-black font-extrabold text-[11px] py-2 rounded-xl transition shadow-md">
+                        <i class="fa-solid fa-download mr-1"></i> Instalar Aplicativo Agora
+                    </button>
+                </div>
+
+                <div class="p-2.5 bg-gray-900 rounded-xl border border-gray-800 space-y-2.5 shadow-inner">
+                    <h4 class="font-bold text-white flex items-center justify-between text-[11px]">
+                        <span><i class="fa-solid fa-bullseye text-amber-400 mr-1"></i> Meta Mensal de Ganhos</span>
+                    </h4>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="meta-habilitada" onchange="salvarConfiguracoes()" class="w-4 h-4 accent-amber-500 rounded">
+                        <label for="meta-habilitada" class="text-gray-300 text-[11px]">Habilitar Meta no Dashboard</label>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400">Valor da Meta (R$)</label>
+                        <input type="number" id="meta-valor-input" placeholder="4000.00" onchange="salvarConfiguracoes()" class="w-full bg-gray-800 border border-gray-700/80 rounded-lg p-1.5 text-white text-xs">
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-gray-900 rounded-xl border border-gray-800 space-y-2 shadow-inner">
+                    <h4 class="font-bold text-white flex items-center gap-1 text-[11px]">
+                        <i class="fa-solid fa-key text-amber-400"></i> Segurança (PIN de Acesso)
+                    </h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="password" id="novo-pin-input" maxlength="4" placeholder="Novo PIN" class="bg-gray-800 border border-gray-700/80 rounded-lg p-1.5 text-white text-xs text-center font-bold">
+                        <button onclick="salvarNovoPin()" class="btn-gradient hover:opacity-90 text-black font-extrabold rounded-lg p-1.5 text-[11px]">Guardar PIN</button>
+                    </div>
+                    <button onclick="removerPinTotal()" class="w-full bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-bold py-1.5 rounded-lg transition text-[11px]">
+                        Desativar PIN
+                    </button>
+                </div>
+
+                <!-- BOTÃO ZERAR TUDO -->
+                <div class="p-2.5 bg-red-500/10 rounded-xl border border-red-500/30 space-y-1.5">
+                    <h4 class="font-bold text-red-400 flex items-center gap-1.5 text-[11px]">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Reiniciar Registos (Começar do Zero)
+                    </h4>
+                    <p class="text-[9px] text-gray-400">Apaga todas as diárias de entregas, gastos e quinzenas registradas no aplicativo.</p>
+                    <button onclick="zerarTodosOsDados()" class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-2 rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-red-600/20 text-xs">
+                        <i class="fa-solid fa-trash-can"></i> Zerar Todos os Dados
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal de Transportadoras -->
+    <div id="modal-transportadoras" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-3 backdrop-blur-sm">
+        <div class="glass-card border border-gray-800 rounded-3xl max-w-md w-full p-4 space-y-3 shadow-2xl text-xs">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-building mr-1"></i> Cadastrar / Excluir Transportadora</h3>
+                <button onclick="fecharModalTransportadoras()" class="text-gray-400 hover:text-white p-1.5 rounded-xl hover:bg-gray-800"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <div class="space-y-2">
+                <div class="flex gap-2">
+                    <input type="text" id="nova-transportadora-nome" placeholder="Nova Empresa (Ex: Shopee Louveira)" class="flex-1 bg-gray-900 border border-gray-700/80 rounded-xl p-2 text-white text-xs">
+                    <button onclick="adicionarTransportadora()" class="btn-gradient text-black font-extrabold px-3 rounded-xl hover:opacity-90 text-xs">Adicionar</button>
+                </div>
+            </div>
+            <div class="border-t border-gray-800/80 pt-2.5">
+                <span class="text-[11px] text-gray-400 block mb-2 font-medium">Transportadoras Cadastradas:</span>
+                <div id="lista-transportadoras-modal" class="space-y-1.5 max-h-44 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Bar Fixa Estilo "Dock" Fluente -->
+    <nav class="fixed bottom-2.5 left-2.5 right-2.5 glass-card border border-gray-800/80 z-50 max-w-md mx-auto shadow-2xl rounded-2xl backdrop-blur-xl">
+        <div class="flex justify-around items-center h-14 px-1">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-0.5 text-amber-400 transition-transform p-1.5 rounded-xl">
+                <i class="fa-solid fa-chart-pie text-sm"></i>
+                <span class="text-[8px] font-semibold">Painel</span>
+            </button>
+            <button onclick="switchTab('pacotes')" id="nav-pacotes" class="flex flex-col items-center gap-0.5 text-gray-400 transition-transform p-1.5 rounded-xl">
+                <i class="fa-solid fa-box text-sm"></i>
+                <span class="text-[8px] font-semibold">Entregas</span>
+            </button>
+            <button onclick="switchTab('financas')" id="nav-financas" class="flex flex-col items-center gap-0.5 text-gray-400 transition-transform p-1.5 rounded-xl">
+                <i class="fa-solid fa-sack-dollar text-sm"></i>
+                <span class="text-[8px] font-semibold">Finanças</span>
+            </button>
+            <button onclick="switchTab('gastos')" id="nav-gastos" class="flex flex-col items-center gap-0.5 text-gray-400 transition-transform p-1.5 rounded-xl">
+                <i class="fa-solid fa-wallet text-sm"></i>
+                <span class="text-[8px] font-semibold">Gastos</span>
+            </button>
+            <button onclick="switchTab('quinzena')" id="nav-quinzena" class="flex flex-col items-center gap-0.5 text-gray-400 transition-transform p-1.5 rounded-xl">
+                <i class="fa-solid fa-calendar-days text-sm"></i>
+                <span class="text-[8px] font-semibold">Quinzenas</span>
+            </button>
+            <button onclick="switchTab('perfil')" id="nav-perfil" class="flex flex-col items-center gap-0.5 text-gray-400 transition-transform p-1.5 rounded-xl">
+                <i class="fa-solid fa-id-card text-sm"></i>
+                <span class="text-[8px] font-semibold">Perfil</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('btn-instalar-app');
+            if(btn) btn.style.display = 'block';
+        });
+
+        function instalarAppPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Utilizador aceitou instalar o aplicativo');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                alert('Para instalar na tela inicial, abra as opções do navegador (três pontos no topo) e selecione "Adicionar à tela inicial" ou "Instalar aplicação".');
+            }
+        }
+
+        let appData = {
+            transportadoras: JSON.parse(localStorage.getItem('motoca_transportadoras')) || ['Shopee', 'iFood', '99 Entregas'],
+            diarias: JSON.parse(localStorage.getItem('motoca_diarias')) || [],
+            gastos: JSON.parse(localStorage.getItem('motoca_gastos')) || [],
+            ajustesQuinzena: JSON.parse(localStorage.getItem('motoca_ajustes_quinzena')) || {},
+            perfil: JSON.parse(localStorage.getItem('motoca_perfil')) || { nome: '', telefone: '', moto: '', placa: '' },
+            meta: parseFloat(localStorage.getItem('motoca_meta_valor')) || 4000.00,
+            metaHabilitada: localStorage.getItem('motoca_meta_habilitada') !== 'false',
+            pin: localStorage.getItem('motoca_pin') || '',
+            tema: localStorage.getItem('motoca_tema') || 'dark',
+            privacidade: localStorage.getItem('motoca_privacidade') === 'true'
+        };
+
+        let apenasPendentesQuinzena = false;
+        let myChart = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            verificarBloqueioPin();
+            aplicarTemaInicial();
+            aplicarEstadoPrivacidade();
+            
+            const hoje = new Date().toISOString().split('T')[0];
+            const primeiroDiaMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+            const ultimoDiaMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+            
+            document.getElementById('filtro-data-inicio').value = primeiroDiaMes;
+            document.getElementById('filtro-data-fim').value = ultimoDiaMes;
+            document.getElementById('pacote-data').value = hoje;
+            document.getElementById('gasto-data').value = hoje;
+
+            document.getElementById('filtro-mes-rapido').value = hoje.substring(0, 7);
+
+            document.getElementById('meta-valor-input').value = appData.meta;
+            document.getElementById('meta-habilitada').checked = appData.metaHabilitada;
+
+            document.getElementById('perfil-nome').value = appData.perfil.nome || '';
+            document.getElementById('perfil-telefone').value = appData.perfil.telefone || '';
+            document.getElementById('perfil-moto').value = appData.perfil.moto || '';
+            document.getElementById('perfil-placa').value = appData.perfil.placa || '';
+
+            atualizarSelectsTransportadoras();
+            aplicarFiltrosGlobais();
+            calcularCustoKM();
+            calcularMediaCombustivelReal();
+        });
+
+        function togglePrivacidade() {
+            appData.privacidade = !appData.privacidade;
+            localStorage.setItem('motoca_privacidade', appData.privacidade);
+            aplicarEstadoPrivacidade();
+        }
+
+        function aplicarEstadoPrivacidade() {
+            const icon = document.getElementById('icone-privacidade');
+            const btn = document.getElementById('btn-privacidade');
+            const elementos = document.querySelectorAll('.val-privado');
+
+            if (appData.privacidade) {
+                if(icon) icon.className = "fa-solid fa-eye-slash text-xs";
+                if(btn) btn.className = "p-2 text-amber-400 bg-amber-500/10 rounded-xl hover:bg-amber-500/20 transition text-xs border border-amber-500/20";
+                elementos.forEach(el => {
+                    if(!el.dataset.original) el.dataset.original = el.innerText;
+                    el.innerText = "R$ ••••";
+                });
+            } else {
+                if(icon) icon.className = "fa-solid fa-eye text-xs";
+                if(btn) btn.className = "p-2 text-gray-300 bg-gray-800/80 rounded-xl hover:bg-gray-700 transition text-xs border border-gray-700";
+                elementos.forEach(el => {
+                    if(el.dataset.original) el.innerText = el.dataset.original;
+                });
+                aplicarFiltrosGlobais();
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar-menu');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function filtrarPorMesSidebar(anoMes) {
+            if(!anoMes) return;
+            const [ano, mes] = anoMes.split('-');
+            const primeiroDia = `${ano}-${mes}-01`;
+            const ultimoDia = new Date(ano, mes, 0).toISOString().split('T')[0];
+
+            document.getElementById('filtro-data-inicio').value = primeiroDia;
+            document.getElementById('filtro-data-fim').value = ultimoDia;
+            aplicarFiltrosGlobais();
+            toggleSidebar();
+        }
+
+        function limparFiltroMes() {
+            const hoje = new Date();
+            const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+            const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
+            
+            document.getElementById('filtro-data-inicio').value = primeiroDiaMes;
+            document.getElementById('filtro-data-fim').value = ultimoDiaMes;
+            document.getElementById('filtro-mes-rapido').value = hoje.toISOString().split('T')[0].substring(0, 7);
+            aplicarFiltrosGlobais();
+            toggleSidebar();
+        }
+
+        function aplicarTemaInicial() {
+            const body = document.getElementById('body-app');
+            const icon = document.getElementById('icone-tema');
+            if (appData.tema === 'light') {
+                body.classList.add('light');
+                document.documentElement.classList.remove('dark');
+                if(icon) icon.className = "fa-solid fa-moon text-sm";
+            } else {
+                body.classList.remove('light');
+                document.documentElement.classList.add('dark');
+                if(icon) icon.className = "fa-solid fa-sun text-sm";
+            }
+        }
+
+        function toggleTema() {
+            appData.tema = appData.tema === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('motoca_tema', appData.tema);
+            aplicarTemaInicial();
+        }
+
+        function switchTab(tabId) {
+            ['dashboard', 'pacotes', 'financas', 'gastos', 'calculadora', 'quinzena', 'perfil'].forEach(tab => {
+                const el = document.getElementById(`tab-${tab}`);
+                const nav = document.getElementById(`nav-${tab}`);
+                if (el) el.classList.add('hidden');
+                if (nav) {
+                    nav.classList.remove('text-amber-400', 'scale-105');
+                    nav.classList.add('text-gray-400');
+                }
+            });
+
+            const currentTab = document.getElementById(`tab-${tabId}`);
+            const currentNav = document.getElementById(`nav-${tabId}`);
+            if (currentTab) currentTab.classList.remove('hidden');
+            if (currentNav) {
+                currentNav.classList.add('text-amber-400', 'scale-105');
+                currentNav.classList.remove('text-gray-400');
+            }
+
+            if (tabId === 'dashboard') aplicarFiltrosGlobais();
+            if (tabId === 'financas') renderFinancas();
+            if (tabId === 'quinzena') renderQuinzenas();
+            if (tabId === 'gastos') {
+                renderGastos();
+                calcularMediaCombustivelReal();
+            }
+        }
+
+        function verificarBloqueioPin() {
+            if (appData.pin && appData.pin.length === 4) {
+                document.getElementById('pin-lock-screen').classList.remove('hidden');
+            } else {
+                document.getElementById('pin-lock-screen').classList.add('hidden');
+            }
+        }
+
+        function movePinFocus(current) {
+            const currentInput = document.getElementById(`pin-${current}`);
+            if (currentInput.value.length === 1 && current < 4) {
+                document.getElementById(`pin-${current + 1}`).focus();
+            }
+        }
+
+        function validarPinEntrada() {
+            const p1 = document.getElementById('pin-1').value;
+            const p2 = document.getElementById('pin-2').value;
+            const p3 = document.getElementById('pin-3').value;
+            const p4 = document.getElementById('pin-4').value;
+            const pinDigitado = `${p1}${p2}${p3}${p4}`;
+
+            if (pinDigitado === appData.pin) {
+                document.getElementById('pin-lock-screen').classList.add('hidden');
+            } else {
+                alert('PIN incorreto!');
+                for (let i = 1; i <= 4; i++) document.getElementById(`pin-${i}`).value = '';
+                document.getElementById('pin-1').focus();
+            }
+        }
+
+        function resetarPinEsquecido() {
+            if (confirm('Deseja realmente resetar o PIN de acesso?')) {
+                localStorage.removeItem('motoca_pin');
+                appData.pin = '';
+                document.getElementById('pin-lock-screen').classList.add('hidden');
+                alert('PIN removido com sucesso!');
+            }
+        }
+
+        function salvarNovoPin() {
+            const novoPin = document.getElementById('novo-pin-input').value.trim();
+            if (novoPin.length === 4 && !isNaN(novoPin)) {
+                appData.pin = novoPin;
+                localStorage.setItem('motoca_pin', novoPin);
+                document.getElementById('novo-pin-input').value = '';
+                alert('Novo PIN guardado com sucesso!');
+            } else {
+                alert('O PIN deve conter 4 números.');
+            }
+        }
+
+        function removerPinTotal() {
+            if (confirm('Desativar o bloqueio por PIN?')) {
+                localStorage.removeItem('motoca_pin');
+                appData.pin = '';
+                alert('Bloqueio desativado.');
+            }
+        }
+
+        function salvarConfiguracoes() {
+            appData.meta = parseFloat(document.getElementById('meta-valor-input').value) || 4000.00;
+            appData.metaHabilitada = document.getElementById('meta-habilitada').checked;
+
+            localStorage.setItem('motoca_meta_valor', appData.meta);
+            localStorage.setItem('motoca_meta_habilitada', appData.metaHabilitada);
+
+            renderDashboard();
+        }
+
+        function salvarPerfil() {
+            appData.perfil = {
+                nome: document.getElementById('perfil-nome').value.trim(),
+                telefone: document.getElementById('perfil-telefone').value.trim(),
+                moto: document.getElementById('perfil-moto').value.trim(),
+                placa: document.getElementById('perfil-placa').value.trim()
+            };
+            localStorage.setItem('motoca_perfil', JSON.stringify(appData.perfil));
+            alert('Perfil atualizado com sucesso!');
+        }
+
+        function zerarTodosOsDados() {
+            if (confirm('ATENÇÃO: Tem certeza que deseja apagar TODOS os registros de entregas, gastos e quinzenas para começar do zero?')) {
+                if (confirm('Esta ação não pode ser desfeita! Confirma a exclusão total?')) {
+                    appData.diarias = [];
+                    appData.gastos = [];
+                    appData.ajustesQuinzena = {};
+
+                    localStorage.removeItem('motoca_diarias');
+                    localStorage.removeItem('motoca_gastos');
+                    localStorage.removeItem('motoca_ajustes_quinzena');
+
+                    aplicarFiltrosGlobais();
+                    renderQuinzenas();
+                    renderGastos();
+                    alert('Todos os dados foram zerados com sucesso!');
+                }
+            }
+        }
+
+        function getQuinzenaChave(dataStr, transportadora) {
+            const parts = dataStr.split('-');
+            const Q = parseInt(parts[2]) <= 15 ? `1ª Quinzena (${parts[1]}/${parts[0]})` : `2ª Quinzena (${parts[1]}/${parts[0]})`;
+            const trans = transportadora || 'Geral';
+            return `${Q}_${trans}`;
+        }
+
+        function getDiariasFiltradas() {
+            const dataInicio = document.getElementById('filtro-data-inicio').value;
+            const dataFim = document.getElementById('filtro-data-fim').value;
+            const transportadora = document.getElementById('filtro-transportadora').value;
+
+            return appData.diarias.filter(item => {
+                let match = true;
+                if (dataInicio && item.data < dataInicio) match = false;
+                if (dataFim && item.data > dataFim) match = false;
+                if (transportadora && item.transportadora !== transportadora) match = false;
+                return match;
+            });
+        }
+
+        function getGastosFiltrados() {
+            const dataInicio = document.getElementById('filtro-data-inicio').value;
+            const dataFim = document.getElementById('filtro-data-fim').value;
+
+            return appData.gastos.filter(g => {
+                let match = true;
+                if (dataInicio && g.data < dataInicio) match = false;
+                if (dataFim && g.data > dataFim) match = false;
+                return match;
+            });
+        }
+
+        function calcularTotalGeralComAjustes(diariasBase) {
+            let totalPacotes = diariasBase.reduce((acc, curr) => acc + curr.total, 0);
+            let totalAjustesBonus = 0;
+            let totalAjustesDesconto = 0;
+            
+            const quinzenasEncontradas = {};
+            diariasBase.forEach(item => {
+                const chave = getQuinzenaChave(item.data, item.transportadora);
+                quinzenasEncontradas[chave] = true;
+            });
+
+            Object.keys(quinzenasEncontradas).forEach(chave => {
+                if(appData.ajustesQuinzena[chave]) {
+                    totalAjustesBonus += (appData.ajustesQuinzena[chave].bonus || 0);
+                    totalAjustesDesconto += (appData.ajustesQuinzena[chave].desconto || 0);
+                }
+            });
+
+            return totalPacotes + totalAjustesBonus - totalAjustesDesconto;
+        }
+
+        function aplicarFiltrosGlobais() {
+            renderDashboard();
+            renderDiarias();
+            renderFinancas();
+            renderGastos();
+            if (appData.privacidade) aplicarEstadoPrivacidade();
+        }
+
+        function renderDashboard() {
+            const diariasFiltradas = getDiariasFiltradas();
+            const dataInicio = document.getElementById('filtro-data-inicio').value;
+            const dataFim = document.getElementById('filtro-data-fim').value;
+
+            let totalGanhos = calcularTotalGeralComAjustes(diariasFiltradas);
+            let gastosMoto = appData.gastos.filter(g => g.tipo === 'moto' && (!dataInicio || g.data >= dataInicio) && (!dataFim || g.data <= dataFim)).reduce((acc, curr) => acc + curr.valor, 0);
+            let gastosPessoal = appData.gastos.filter(g => g.tipo === 'pessoal' && (!dataInicio || g.data >= dataInicio) && (!dataFim || g.data <= dataFim)).reduce((acc, curr) => acc + curr.valor, 0);
+            let lucroMoto = totalGanhos - gastosMoto;
+
+            document.getElementById('dash-ganhos').innerText = `R$ ${totalGanhos.toFixed(2)}`;
+            document.getElementById('dash-gastos-moto').innerText = `R$ ${gastosMoto.toFixed(2)}`;
+            document.getElementById('dash-gastos-pessoal').innerText = `R$ ${gastosPessoal.toFixed(2)}`;
+            document.getElementById('dash-lucro').innerText = `R$ ${lucroMoto.toFixed(2)}`;
+
+            const resumoTransContainer = document.getElementById('resumo-transportadoras-list');
+            resumoTransContainer.innerHTML = '';
+            const totaisPorTrans = {};
+            appData.transportadoras.forEach(t => totaisPorTrans[t] = 0);
+            
+            const quinzenasContabilizadas = {};
+            diariasFiltradas.forEach(item => {
+                const trans = item.transportadora || 'Geral';
+                totaisPorTrans[trans] = (totaisPorTrans[trans] || 0) + item.total;
+                const chave = getQuinzenaChave(item.data, trans);
+                if (!quinzenasContabilizadas[chave] && appData.ajustesQuinzena[chave]) {
+                    totaisPorTrans[trans] += (appData.ajustesQuinzena[chave].bonus || 0) - (appData.ajustesQuinzena[chave].desconto || 0);
+                    quinzenasContabilizadas[chave] = true;
+                }
+            });
+
+            Object.entries(totaisPorTrans).sort((a,b) => b[1] - a[1]).forEach(([trans, valor]) => {
+                resumoTransContainer.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800 text-xs transition hover:bg-gray-800/80">
+                        <span class="font-semibold text-white flex items-center gap-2"><i class="fa-solid fa-medal text-amber-400"></i> ${trans}</span>
+                        <span class="font-extrabold text-amber-400 val-privado">R$ ${valor.toFixed(2)}</span>
+                    </div>
+                `;
+            });
+
+            const cardMeta = document.getElementById('card-meta-container');
+            if (appData.metaHabilitada) {
+                cardMeta.classList.remove('hidden');
+                const totalGeralMes = calcularTotalGeralComAjustes(appData.diarias);
+                const percentual = Math.min((totalGeralMes / appData.meta) * 100, 100);
+                document.getElementById('meta-bar').style.width = `${percentual}%`;
+                document.getElementById('meta-text').innerText = `R$ ${totalGeralMes.toFixed(0)} / R$ ${appData.meta.toFixed(0)}`;
+            } else {
+                cardMeta.classList.add('hidden');
+            }
+
+            renderChart(diariasFiltradas);
+        }
+
+        function renderChart(diariasFiltradas) {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            if (myChart) myChart.destroy();
+
+            const datasUnicas = [...new Set(diariasFiltradas.map(d => d.data))].sort();
+            const labels = datasUnicas.map(d => d.split('-').slice(1).reverse().join('/'));
+            const ganhosDia = datasUnicas.map(d => diariasFiltradas.filter(item => item.data === d).reduce((acc, curr) => acc + curr.total, 0));
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length ? labels : ['Sem dados'],
+                    datasets: [{ label: 'Ganhos (R$)', data: ganhosDia.length ? ganhosDia : [0], backgroundColor: '#f59e0b', borderRadius: 6 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#9CA3AF', font: { size: 10, family: 'Inter' } } } },
+                    scales: {
+                        x: { ticks: { color: '#9CA3AF' }, grid: { color: 'rgba(255,255,255,0.03)' } },
+                        y: { ticks: { color: '#9CA3AF' }, grid: { color: 'rgba(255,255,255,0.03)' } }
+                    }
+                }
+            });
+        }
+
+        function calcularTotalDiario() {
+            const qtd = parseFloat(document.getElementById('pacote-qtd').value) || 0;
+            const val = parseFloat(document.getElementById('pacote-valor').value) || 0;
+            const total = qtd * val;
+            document.getElementById('pacote-total-preview').value = `R$ ${total.toFixed(2)}`;
+            if (appData.privacidade) aplicarEstadoPrivacidade();
+        }
+
+        function salvarDiaria(e) {
+            e.preventDefault();
+            const transportadora = document.getElementById('pacote-transportadora').value;
+            const data = document.getElementById('pacote-data').value;
+            const qtd = parseInt(document.getElementById('pacote-qtd').value);
+            const val = parseFloat(document.getElementById('pacote-valor').value);
+            const statusManual = document.getElementById('pacote-status').value;
+            const total = qtd * val;
+
+            // Verifica se a quinzena dessa data já está marcada como Paga
+            const chaveQ = getQuinzenaChave(data, transportadora);
+            const statusQuinzena = appData.ajustesQuinzena[chaveQ]?.status;
+            const statusFinal = statusQuinzena === 'Pago' ? 'Pago' : statusManual;
+
+            appData.diarias.push({ id: Date.now(), transportadora, data, qtd, val, total, status: statusFinal });
+            localStorage.setItem('motoca_diarias', JSON.stringify(appData.diarias));
+
+            document.getElementById('form-pacote').reset();
+            document.getElementById('pacote-data').value = new Date().toISOString().split('T')[0];
+            document.getElementById('pacote-valor').value = "3.10";
+            calcularTotalDiario();
+            aplicarFiltrosGlobais();
+            alert('Diária registada com sucesso!');
+        }
+
+        function renderDiarias() {
+            const diariasFiltradas = getDiariasFiltradas();
+            const container = document.getElementById('tabela-diarias');
+            document.getElementById('contador-historico').innerText = `${diariasFiltradas.length} registos`;
+            container.innerHTML = '';
+
+            if (diariasFiltradas.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-gray-500">Nenhum registo encontrado.</div>`;
+                return;
+            }
+
+            diariasFiltradas.sort((a,b) => new Date(b.data) - new Date(a.data)).forEach(item => {
+                const chaveQ = getQuinzenaChave(item.data, item.transportadora);
+                const statusReal = appData.ajustesQuinzena[chaveQ]?.status === 'Pago' ? 'Pago' : item.status;
+
+                const card = document.createElement('div');
+                card.className = "p-3 flex justify-between items-center hover:bg-gray-800/40 transition gap-2";
+                card.innerHTML = `
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold text-amber-400">${item.transportadora || 'Geral'}</span>
+                            <span class="text-[10px] text-gray-400">(${item.data.split('-').reverse().join('/')})</span>
+                        </div>
+                        <div class="text-[11px] text-gray-300">
+                            ${item.qtd} pacotes • <span class="font-extrabold text-green-400 val-privado">R$ ${item.total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] px-2 py-0.5 rounded-lg font-bold ${statusReal === 'Pago' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-gray-800 text-gray-300'}">${statusReal}</span>
+                        <button onclick="removerDiaria(${item.id})" class="text-red-400 p-1.5 hover:text-red-300 rounded-lg hover:bg-red-500/10"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            if (appData.privacidade) aplicarEstadoPrivacidade();
+        }
+
+        function removerDiaria(id) {
+            if(confirm('Apagar esta diária?')) {
+                appData.diarias = appData.diarias.filter(d => d.id !== id);
+                localStorage.setItem('motoca_diarias', JSON.stringify(appData.diarias));
+                aplicarFiltrosGlobais();
+            }
+        }
+
+        function renderFinancas() {
+            const diariasFiltradas = getDiariasFiltradas();
+            const container = document.getElementById('tabela-financas-agrupadas');
+            container.innerHTML = '';
+            
+            const porTransportadora = {};
+            let totalPago = 0, totalPendente = 0;
+            const quinzenasProcessadas = {};
+
+            diariasFiltradas.forEach(item => {
+                const trans = item.transportadora || 'Geral';
+                const chaveQ = getQuinzenaChave(item.data, trans);
+                const statusQuinzena = appData.ajustesQuinzena[chaveQ]?.status;
+                const isPago = statusQuinzena === 'Pago' || item.status === 'Pago';
+
+                if(!porTransportadora[trans]) {
+                    porTransportadora[trans] = { pacotes: 0, total: 0 };
+                }
+                porTransportadora[trans].pacotes += item.qtd;
+                porTransportadora[trans].total += item.total;
+                
+                if (isPago) {
+                    totalPago += item.total;
+                } else {
+                    totalPendente += item.total;
+                }
+
+                // Adiciona o bônus/desconto dessa quinzena uma única vez para o período filtrado
+                if (!quinzenasProcessadas[chaveQ] && appData.ajustesQuinzena[chaveQ]) {
+                    const ajuste = appData.ajustesQuinzena[chaveQ];
+                    const valorLiquidoAjuste = (ajuste.bonus || 0) - (ajuste.desconto || 0);
+                    porTransportadora[trans].total += valorLiquidoAjuste;
+
+                    if (ajuste.status === 'Pago') {
+                        totalPago += valorLiquidoAjuste;
+                    } else {
+                        totalPendente += valorLiquidoAjuste;
+                    }
+                    quinzenasProcessadas[chaveQ] = true;
+                }
+            });
+
+            const empresas = Object.keys(porTransportadora);
+            if(empresas.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-gray-500">Nenhum registo financeiro encontrado.</div>`;
+            } else {
+                empresas.forEach(trans => {
+                    const dados = porTransportadora[trans];
+                    const row = document.createElement('div');
+                    row.className = "p-3 flex justify-between items-center hover:bg-gray-800/40 transition";
+                    row.innerHTML = `
+                        <div>
+                            <span class="font-semibold text-white block">${trans}</span>
+                            <span class="text-[11px] text-gray-400">${dados.pacotes} pacotes entregues</span>
+                        </div>
+                        <span class="font-extrabold text-amber-400 text-sm val-privado">R$ ${dados.total.toFixed(2)}</span>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            document.getElementById('financas-total-pago').innerText = `R$ ${totalPago.toFixed(2)}`;
+            document.getElementById('financas-total-pendente').innerText = `R$ ${totalPendente.toFixed(2)}`;
+            if (appData.privacidade) aplicarEstadoPrivacidade();
+        }
+
+        function setGastoTipo(tipo) {
+            document.getElementById('gasto-tipo').value = tipo;
+            const btnMoto = document.getElementById('btn-gasto-moto');
+            const btnPessoal = document.getElementById('btn-gasto-pessoal');
+            const catMoto = document.getElementById('cat-moto');
+            const catPessoal = document.getElementById('cat-pessoal');
+            const campoKm = document.getElementById('campo-km');
+
+            if (tipo === 'moto') {
+                btnMoto.className = 'flex-1 pb-2 font-bold text-center border-b-2 border-amber-400 text-amber-400 transition-all text-xs';
+                btnPessoal.className = 'flex-1 pb-2 font-bold text-center text-gray-500 transition-all text-xs';
+                catMoto.classList.remove('hidden');
+                catPessoal.classList.add('hidden');
+                campoKm.classList.remove('hidden');
+                document.getElementById('gasto-categoria').value = 'Combustível';
+            } else {
+                btnPessoal.className = 'flex-1 pb-2 font-bold text-center border-b-2 border-blue-400 text-blue-400 transition-all text-xs';
+                btnMoto.className = 'flex-1 pb-2 font-bold text-center text-gray-500 transition-all text-xs';
+                catPessoal.classList.remove('hidden');
+                catMoto.classList.add('hidden');
+                campoKm.classList.add('hidden');
+                document.getElementById('gasto-categoria').value = 'Aluguer';
+            }
+        }
+
+        function selectCat(btn, categoria) {
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('border-amber-500', 'text-white');
+                b.classList.add('border-gray-700', 'text-gray-400');
+            });
+            btn.classList.remove('border-gray-700', 'text-gray-400');
+            btn.classList.add('border-amber-500', 'text-white');
+            document.getElementById('gasto-categoria').value = categoria;
+        }
+
+        function salvarGasto(e) {
+            e.preventDefault();
+            const idEdit = document.getElementById('gasto-id').value;
+            const tipo = document.getElementById('gasto-tipo').value;
+            const categoria = document.getElementById('gasto-categoria').value;
+            const valor = parseFloat(document.getElementById('gasto-valor').value);
+            const litros = parseFloat(document.getElementById('gasto-litros').value) || 0;
+            const km = parseInt(document.getElementById('gasto-km').value) || 0;
+            const data = document.getElementById('gasto-data').value;
+
+            if (idEdit) {
+                const index = appData.gastos.findIndex(g => g.id == idEdit);
+                if (index !== -1) {
+                    appData.gastos[index] = { id: Number(idEdit), tipo, categoria, valor, litros, km, data };
+                    alert('Despesa atualizada com sucesso!');
+                }
+            } else {
+                appData.gastos.push({ id: Date.now(), tipo, categoria, valor, litros, km, data });
+                alert('Despesa registada!');
+            }
+
+            localStorage.setItem('motoca_gastos', JSON.stringify(appData.gastos));
+            limparFormularioGasto();
+            aplicarFiltrosGlobais();
+            calcularMediaCombustivelReal();
+        }
+
+        function calcularMediaCombustivelReal() {
+            const abastecimentos = appData.gastos
+                .filter(g => g.tipo === 'moto' && g.categoria === 'Combustível' && g.km > 0 && g.litros > 0)
+                .sort((a,b) => a.km - b.km);
+
+            const containerMedia = document.getElementById('gas-media-kml');
+            const containerInfo = document.getElementById('gas-info-resumo');
+
+            if (abastecimentos.length < 2) {
+                containerMedia.innerText = "-- KM/L";
+                containerInfo.innerText = "Abasteça e registre a KM Atual e os Litros em pelo menos 2 abastecimentos para calcular automaticamente o consumo médio real da sua moto.";
+                return;
+            }
+
+            let totalKmRodados = 0;
+            let totalLitrosConsumidos = 0;
+
+            for (let i = 1; i < abastecimentos.length; i++) {
+                const kmRodado = abastecimentos[i].km - abastecimentos[i-1].km;
+                const litros = abastecimentos[i].litros;
+                if (kmRodado > 0 && litros > 0) {
+                    totalKmRodados += kmRodado;
+                    totalLitrosConsumidos += litros;
+                }
+            }
+
+            if (totalLitrosConsumidos > 0 && totalKmRodados > 0) {
+                const mediaReal = totalKmRodados / totalLitrosConsumidos;
+                containerMedia.innerText = `${mediaReal.toFixed(1)} KM/L`;
+                containerInfo.innerText = `Média calculada com base nos últimos ${abastecimentos.length} abastecimentos (${totalKmRodados} km com ${totalLitrosConsumidos.toFixed(1)}L).`;
+            } else {
+                containerMedia.innerText = "-- KM/L";
+            }
+        }
+
+        function editarGasto(id) {
+            const gasto = appData.gastos.find(g => g.id === id);
+            if (!gasto) return;
+
+            setGastoTipo(gasto.tipo);
+
+            document.getElementById('gasto-id').value = gasto.id;
+            document.getElementById('gasto-valor').value = gasto.valor;
+            document.getElementById('gasto-litros').value = gasto.litros || '';
+            document.getElementById('gasto-km').value = gasto.km || '';
+            document.getElementById('gasto-data').value = gasto.data;
+            document.getElementById('gasto-categoria').value = gasto.categoria;
+
+            const containerCat = gasto.tipo === 'moto' ? 'cat-moto' : 'cat-pessoal';
+            document.querySelectorAll(`#${containerCat} .cat-btn`).forEach(b => {
+                if (b.innerText.trim() === gasto.categoria || (gasto.categoria === 'Aluguer' && b.innerText.trim() === 'Aluguer')) {
+                    selectCat(b, gasto.categoria);
+                }
+            });
+
+            document.getElementById('btn-submit-gasto').innerText = 'Atualizar Despesa';
+            document.getElementById('btn-submit-gasto').className = 'flex-1 btn-gradient text-black font-extrabold py-2.5 rounded-xl text-xs transition shadow-md shadow-amber-500/20';
+            document.getElementById('btn-cancelar-gasto').classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function removerGasto(id) {
+            if (confirm('Deseja realmente apagar esta despesa?')) {
+                appData.gastos = appData.gastos.filter(g => g.id !== id);
+                localStorage.setItem('motoca_gastos', JSON.stringify(appData.gastos));
+                aplicarFiltrosGlobais();
+                calcularMediaCombustivelReal();
+            }
+        }
+
+        function limparFormularioGasto() {
+            document.getElementById('form-gasto').reset();
+            document.getElementById('gasto-id').value = '';
+            document.getElementById('gasto-data').value = new Date().toISOString().split('T')[0];
+            document.getElementById('btn-submit-gasto').innerText = 'Registar Despesa';
+            document.getElementById('btn-submit-gasto').className = 'flex-1 bg-red-600 hover:bg-red-700 text-white font-extrabold py-2.5 rounded-xl text-xs transition shadow-md shadow-red-600/20';
+            document.getElementById('btn-cancelar-gasto').classList.add('hidden');
+        }
+
+        function renderGastos() {
+            const gastosFiltrados = getGastosFiltrados();
+            const container = document.getElementById('tabela-gastos');
+            document.getElementById('contador-gastos').innerText = `${gastosFiltrados.length} registos`;
+            container.innerHTML = '';
+
+            if (gastosFiltrados.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-gray-500">Nenhum gasto registrado.</div>`;
+                return;
+            }
+
+            gastosFiltrados.sort((a, b) => new Date(b.data) - new Date(a.data)).forEach(g => {
+                const card = document.createElement('div');
+                card.className = "p-3 flex justify-between items-center hover:bg-gray-800/40 transition gap-2";
+                const tagTipo = g.tipo === 'moto' ? '<span class="text-amber-400 font-semibold">[Moto]</span>' : '<span class="text-blue-400 font-semibold">[Pessoal]</span>';
+                card.innerHTML = `
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-1.5">
+                            ${tagTipo} <span class="font-semibold text-white">${g.categoria}</span>
+                            <span class="text-[10px] text-gray-400">(${g.data.split('-').reverse().join('/')})</span>
+                        </div>
+                        <div class="text-xs font-extrabold text-red-400 val-privado">R$ ${g.valor.toFixed(2)}</div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="editarGasto(${g.id})" class="text-amber-400 p-1.5 hover:text-amber-300 rounded-lg hover:bg-amber-500/10" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="removerGasto(${g.id})" class="text-red-400 p-1.5 hover:text-red-300 rounded-lg hover:bg-red-500/10" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function calcularCustoKM() {
+            const preco = parseFloat(document.getElementById('calc-preco-combustivel').value) || 0;
+            const kmLitro = parseFloat(document.getElementById('calc-km-litro').value) || 1;
+            document.getElementById('custo-por-km').innerText = `R$ ${(preco / kmLitro).toFixed(2)} / km`;
+            calcularViabilidadeCorrida();
+        }
+
+        function calcularViabilidadeCorrida() {
+            const preco = parseFloat(document.getElementById('calc-preco-combustivel').value) || 0;
+            const kmLitro = parseFloat(document.getElementById('calc-km-litro').value) || 1;
+            const valorCorrida = parseFloat(document.getElementById('calc-valor-corrida').value) || 0;
+            const kmCorrida = parseFloat(document.getElementById('calc-km-corrida').value) || 0;
+
+            const custo = (kmCorrida / kmLitro) * preco;
+            const lucro = valorCorrida - custo;
+
+            document.getElementById('res-custo').innerText = `R$ ${custo.toFixed(2)}`;
+            document.getElementById('res-lucro').innerText = `R$ ${lucro.toFixed(2)}`;
+            document.getElementById('res-lucro').className = lucro >= 0 ? "text-green-400 font-extrabold val-privado" : "text-red-500 font-extrabold val-privado";
+            if (appData.privacidade) aplicarEstadoPrivacidade();
+        }
+
+        function alternarFiltroPendentes() {
+            apenasPendentesQuinzena = !apenasPendentesQuinzena;
+            const btn = document.getElementById('btn-filtro-pendente');
+            if(apenasPendentesQuinzena) {
+                btn.className = "text-[10px] bg-red-500 text-white border border-red-500 px-2.5 py-1 rounded-xl font-bold transition shadow";
+                btn.innerText = "Mostrando Apenas Pendentes (Ver Todos)";
+            } else {
+                btn.className = "text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40 px-2.5 py-1 rounded-xl font-bold transition";
+                btn.innerText = "Ver Apenas Pendentes";
+            }
+            renderQuinzenas();
+        }
+
+        function renderQuinzenas() {
+            const container = document.getElementById('tabela-quinzenal');
+            container.innerHTML = '';
+            const quinzenas = {};
+            
+            appData.diarias.forEach(item => {
+                const parts = item.data.split('-');
+                const Q = parseInt(parts[2]) <= 15 ? `1ª Quinzena (${parts[1]}/${parts[0]})` : `2ª Quinzena (${parts[1]}/${parts[0]})`;
+                const trans = item.transportadora || 'Geral';
+                const chave = `${Q}_${trans}`;
+
+                if (!quinzenas[chave]) {
+                    quinzenas[chave] = { periodo: Q, transportadora: trans, pacotes: 0, valorPacotes: 0, idsDiarias: [] };
+                }
+                quinzenas[chave].pacotes += item.qtd;
+                quinzenas[chave].valorPacotes += item.total;
+                quinzenas[chave].idsDiarias.push(item.id);
+            });
+
+            const selectPer = document.getElementById('ajuste-periodo');
+            const selectTrans = document.getElementById('ajuste-transportadora');
+            selectPer.innerHTML = '';
+            selectTrans.innerHTML = '';
+
+            const periodosUnicos = [...new Set(Object.values(quinzenas).map(q => q.periodo))];
+            if(periodosUnicos.length === 0) {
+                const mesAno = new Date().toISOString().split('T')[0].split('-');
+                periodosUnicos.push(`1ª Quinzena (${mesAno[1]}/${mesAno[0]})`, `2ª Quinzena (${mesAno[1]}/${mesAno[0]})`);
+            }
+            periodosUnicos.forEach(p => selectPer.innerHTML += `<option value="${p}">${p}</option>`);
+            appData.transportadoras.forEach(t => selectTrans.innerHTML += `<option value="${t}">${t}</option>`);
+
+            let chavesOrdenadas = Object.keys(quinzenas).sort().reverse();
+
+            if (apenasPendentesQuinzena) {
+                chavesOrdenadas = chavesOrdenadas.filter(chave => {
+                    const ajuste = appData.ajustesQuinzena[chave] || { status: 'Pendente' };
+                    return ajuste.status !== 'Pago';
+                });
+            }
+
+            if (chavesOrdenadas.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-gray-500">Nenhum registo encontrado.</div>`;
+                return;
+            }
+
+            chavesOrdenadas.forEach(chave => {
+                const q = quinzenas[chave];
+                const ajuste = appData.ajustesQuinzena[chave] || { bonus: 0, desconto: 0, status: 'Pendente' };
+                const totalLiquido = q.valorPacotes + (ajuste.bonus || 0) - (ajuste.desconto || 0);
+
+                const card = document.createElement('div');
+                card.className = "p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-gray-800/40 transition gap-2 border-b border-gray-800/80";
+                card.innerHTML = `
+                    <div class="space-y-0.5">
+                        <span class="font-semibold text-white text-xs">${q.periodo}</span>
+                        <span class="text-amber-400 text-[10px] font-bold block">${q.transportadora} • ${q.pacotes} pacotes</span>
+                        <div class="text-[11px] text-gray-300">
+                            Bônus: <span class="text-green-400 val-privado">+R$ ${(ajuste.bonus || 0).toFixed(2)}</span> | PNR: <span class="text-red-400 val-privado">-R$ ${(ajuste.desconto || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="text-xs font-extrabold text-green-400 val-privado">Líquido: R$ ${totalLiquido.toFixed(2)}</div>
+                    </div>
+                    <div class="flex items-center gap-1.5 self-end sm:self-center">
+                        <button onclick="alternarStatusQuinzena('${chave}')" class="px-2 py-1 rounded-xl text-[10px] font-bold ${ajuste.status === 'Pago' ? 'bg-green-500/20 text-green-400 border border-green-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'}">
+                            ${ajuste.status}
+                        </button>
+                        <button onclick="enviarResumoQuinzenaWhatsApp('${chave}', '${q.periodo}', '${q.transportadora}', ${q.pacotes}, ${q.valorPacotes}, ${ajuste.bonus || 0}, ${ajuste.desconto || 0}, ${totalLiquido})" class="p-1.5 text-green-400 hover:text-green-300 transition rounded-lg hover:bg-green-500/10" title="WhatsApp">
+                            <i class="fa-brands fa-whatsapp text-sm"></i>
+                        </button>
+                        <button onclick="apagarAjusteQuinzena('${chave}')" class="p-1.5 text-gray-400 hover:text-red-400 transition rounded-lg hover:bg-red-500/10" title="Apagar">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            if (appData.privacidade) aplicarEstadoPrivacidade();
+        }
+
+        function enviarResumoQuinzenaWhatsApp(chave, periodo, transportadora, pacotes, valPacotes, bonus, desconto, totalLiquido) {
+            const nomeCondutor = appData.perfil.nome ? `*Entregador:* ${appData.perfil.nome}\n` : '';
+            const texto = `📦 *RESUMO DE FECHAMENTO QUINZENAL*\n` +
+                `------------------------------------\n` +
+                `${nomeCondutor}` +
+                `*Empresa:* ${transportadora}\n` +
+                `*Período:* ${periodo}\n` +
+                `------------------------------------\n` +
+                `📦 *Pacotes Entregues:* ${pacotes}\n` +
+                `💰 *Valor Entregas:* R$ ${valPacotes.toFixed(2)}\n` +
+                `🎁 *Bônus Extra:* +R$ ${bonus.toFixed(2)}\n` +
+                `🔻 *Desconto PNR:* -R$ ${desconto.toFixed(2)}\n` +
+                `------------------------------------\n` +
+                `💵 *TOTAL LÍQUIDO A RECEBER:* R$ ${totalLiquido.toFixed(2)}\n` +
+                `------------------------------------`;
+
+            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+            window.open(url, '_blank');
+        }
+
+        function salvarAjusteQuinzena() {
+            const periodo = document.getElementById('ajuste-periodo').value;
+            const transportadora = document.getElementById('ajuste-transportadora').value;
+            const bonus = parseFloat(document.getElementById('ajuste-bonus').value) || 0;
+            const desconto = parseFloat(document.getElementById('ajuste-desconto').value) || 0;
+            const chave = `${periodo}_${transportadora}`;
+
+            if(!appData.ajustesQuinzena[chave]) {
+                appData.ajustesQuinzena[chave] = { bonus: 0, desconto: 0, status: 'Pendente' };
+            }
+            appData.ajustesQuinzena[chave].bonus = bonus;
+            appData.ajustesQuinzena[chave].desconto = desconto;
+
+            localStorage.setItem('motoca_ajustes_quinzena', JSON.stringify(appData.ajustesQuinzena));
+            document.getElementById('ajuste-bonus').value = '0.00';
+            document.getElementById('ajuste-desconto').value = '0.00';
+            renderQuinzenas();
+            aplicarFiltrosGlobais();
+            alert('Ajuste de bônus/desconto guardado com sucesso!');
+        }
+
+        function apagarAjusteQuinzena(chave) {
+            if (confirm('Deseja realmente apagar o bônus e PNR desta quinzena?')) {
+                if(appData.ajustesQuinzena[chave]) {
+                    appData.ajustesQuinzena[chave].bonus = 0;
+                    appData.ajustesQuinzena[chave].desconto = 0;
+                    localStorage.setItem('motoca_ajustes_quinzena', JSON.stringify(appData.ajustesQuinzena));
+                    renderQuinzenas();
+                    aplicarFiltrosGlobais();
+                    alert('Ajuste apagado com sucesso!');
+                }
+            }
+        }
+
+        function alternarStatusQuinzena(chave) {
+            if(!appData.ajustesQuinzena[chave]) {
+                appData.ajustesQuinzena[chave] = { bonus: 0, desconto: 0, status: 'Pendente' };
+            }
+            const novoStatus = appData.ajustesQuinzena[chave].status === 'Pago' ? 'Pendente' : 'Pago';
+            appData.ajustesQuinzena[chave].status = novoStatus;
+
+            const [Q, Trans] = chave.split('_');
+            appData.diarias.forEach(item => {
+                const itemChave = getQuinzenaChave(item.data, item.transportadora);
+                if(itemChave === chave) {
+                    item.status = novoStatus;
+                }
+            });
+
+            localStorage.setItem('motoca_ajustes_quinzena', JSON.stringify(appData.ajustesQuinzena));
+            localStorage.setItem('motoca_diarias', JSON.stringify(appData.diarias));
+            renderQuinzenas();
+            aplicarFiltrosGlobais();
+        }
+
+        function atualizarSelectsTransportadoras() {
+            const selectFiltro = document.getElementById('filtro-transportadora');
+            const selectForm = document.getElementById('pacote-transportadora');
+            selectFiltro.innerHTML = '<option value="">Todas</option>';
+            selectForm.innerHTML = '';
+            appData.transportadoras.forEach(t => {
+                selectFiltro.innerHTML += `<option value="${t}">${t}</option>`;
+                selectForm.innerHTML += `<option value="${t}">${t}</option>`;
+            });
+        }
+
+        function abrirModalTransportadoras() { 
+            document.getElementById('modal-transportadoras').classList.remove('hidden'); 
+            renderListaTransportadorasModal();
+        }
+        
+        function fecharModalTransportadoras() { 
+            document.getElementById('modal-transportadoras').classList.add('hidden'); 
+            atualizarSelectsTransportadoras();
+            aplicarFiltrosGlobais();
+        }
+
+        function renderListaTransportadorasModal() {
+            const container = document.getElementById('lista-transportadoras-modal');
+            container.innerHTML = '';
+            appData.transportadoras.forEach((t, index) => {
+                container.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800 text-xs">
+                        <span class="text-white font-medium">${t}</span>
+                        <button onclick="removerTransportadora(${index})" class="text-red-400 hover:text-red-300 font-bold px-2 py-1 bg-red-500/10 rounded-lg">
+                            <i class="fa-solid fa-trash mr-1"></i> Excluir
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function adicionarTransportadora() {
+            const input = document.getElementById('nova-transportadora-nome');
+            const nome = input.value.trim();
+            if(nome && !appData.transportadoras.includes(nome)) {
+                appData.transportadoras.push(nome);
+                localStorage.setItem('motoca_transportadoras', JSON.stringify(appData.transportadoras));
+                input.value = '';
+                renderListaTransportadorasModal();
+            }
+        }
+
+        function removerTransportadora(index) {
+            if(appData.transportadoras.length <= 1) {
+                alert('Mantenha pelo menos uma transportadora.');
+                return;
+            }
+            appData.transportadoras.splice(index, 1);
+            localStorage.setItem('motoca_transportadoras', JSON.stringify(appData.transportadoras));
+            renderListaTransportadorasModal();
+        }
+
+        function exportarExcelWhatsApp() {
+            const diariasFiltradas = getDiariasFiltradas();
+            if(diariasFiltradas.length === 0) {
+                alert('Nenhum dado encontrado para exportar.');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+            const wsEntregas = XLSX.utils.json_to_sheet(diariasFiltradas.map(i => ({ Data: i.data, Transportadora: i.transportadora, Pacotes: i.qtd, ValorUnit: i.val, Total: i.total, Status: i.status })));
+            XLSX.utils.book_append_sheet(wb, wsEntregas, "Entregas");
+            XLSX.writeFile(wb, `Relatorio_Entregas_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `entregas_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+    </script>
+</body>
+</html>
