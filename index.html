@@ -60,15 +60,31 @@
         
         .btn-gradient { background: linear-gradient(135deg, #C5A059 0%, #A68045 100%); color: #0A0A0B !important; }
         .btn-gradient:hover { background: linear-gradient(135deg, #DFBC7A 0%, #C5A059 100%); }
+
+        /* Animação do Toast Flutuante */
+        #toast-aviso {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        #toast-aviso.mostrar {
+            transform: translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body id="body-app" class="bg-brand-darkBg text-gray-100 min-h-screen pb-28 flex flex-col transition-colors duration-200">
+
+    <!-- TOAST FLUTUANTE DE AVISO (Salvo ✔️) -->
+    <div id="toast-aviso" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-gray-900 border border-brand-gold/40 shadow-2xl rounded-2xl px-4 py-2.5 flex items-center gap-2.5 pointer-events-none">
+        <div class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-xs font-bold">✓</div>
+        <span id="toast-texto" class="text-xs font-bold text-white tracking-wide">Salvo ✔️</span>
+    </div>
 
     <!-- TELA DE AUTENTICAÇÃO -->
     <div id="auth-screen" class="fixed inset-0 bg-brand-darkBg z-50 flex flex-col items-center justify-center p-5 overflow-y-auto">
         <div class="w-full max-w-sm glass-card p-6 rounded-3xl shadow-2xl space-y-5">
             <div class="text-center space-y-2">
-                <!-- LOGO EMBLEMA EM SVG DOURADO E PRETO -->
                 <div class="w-20 h-20 mx-auto bg-gradient-to-br from-brand-gold to-yellow-700 p-0.5 rounded-2xl shadow-lg flex items-center justify-center">
                     <div class="w-full h-full bg-brand-darkBg rounded-[14px] flex flex-col items-center justify-center p-2 text-center">
                         <i class="fa-solid fa-box-open text-brand-gold text-2xl mb-1"></i>
@@ -671,6 +687,17 @@
             privacidade: localStorage.getItem('express_privacidade') === 'true'
         };
 
+        // Função para exibir o aviso flutuante "Salvo ✔️" em vez do alert do navegador
+        function mostrarToast(mensagem = "Salvo ✔️") {
+            const toast = document.getElementById('toast-aviso');
+            const texto = document.getElementById('toast-texto');
+            if(texto) texto.innerText = mensagem;
+            toast.classList.add('mostrar');
+            setTimeout(() => {
+                toast.classList.remove('mostrar');
+            }, 2200);
+        }
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
@@ -815,7 +842,6 @@
                 }
             } catch (e) {
                 console.error("Erro ao carregar dados:", e);
-                alert("Erro ao sincronizar com a nuvem. Verifique sua conexão.");
             }
         }
 
@@ -966,6 +992,7 @@
             appData.metaHabilitada = document.getElementById('meta-habilitada').checked;
             renderDashboard();
             await salvarDadosNuvem();
+            mostrarToast("Salvo ✔️");
         };
 
         window.salvarPerfil = async () => {
@@ -977,7 +1004,7 @@
             };
             document.getElementById('sidebar-user-name').innerText = appData.perfil.nome || 'Entregador';
             await salvarDadosNuvem();
-            alert('Perfil salvo na nuvem com sucesso!');
+            mostrarToast("Salvo ✔️");
         };
 
         function getQuinzenaChave(dataStr, transportadora) {
@@ -1142,7 +1169,7 @@
             document.getElementById('pacote-valor').value = "3.10";
             calcularTotalDiario();
             aplicarFiltrosGlobais();
-            alert('Diária de entregas salva com sucesso!');
+            mostrarToast("Salvo ✔️");
         };
 
         function renderDiarias() {
@@ -1285,7 +1312,7 @@
             limparFormularioGasto();
             aplicarFiltrosGlobais();
             calcularMediaCombustivelReal();
-            alert('Despesa salva com sucesso!');
+            mostrarToast("Salvo ✔️");
         };
 
         function calcularMediaCombustivelReal() {
@@ -1493,7 +1520,7 @@
             
             renderQuinzenas();
             aplicarFiltrosGlobais();
-            alert('Ajuste quinzenal salvo com sucesso!');
+            mostrarToast("Salvo ✔️");
         };
 
         window.alternarStatusQuinzena = async (chave) => {
@@ -1549,6 +1576,7 @@
                 input.value = '';
                 await salvarDadosNuvem();
                 abrirModalTransportadoras();
+                mostrarToast("Salvo ✔️");
             } else if (appData.transportadoras.includes(nome)) {
                 alert('Esta transportadora já existe.');
             }
