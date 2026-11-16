@@ -13,9 +13,9 @@
                 extend: {
                     colors: {
                         brand: {
-                            gold: '#C5A059', // Dourado da Logo
+                            gold: '#C5A059',
                             goldHover: '#DFBC7A',
-                            darkBg: '#0A0A0B', // Preto da Logo (quase preto puro)
+                            darkBg: '#0A0A0B',
                             cardBg: 'rgba(20, 20, 22, 0.7)',
                             cardHover: '#2A2A2E',
                             accent: '#CA8A04'
@@ -34,9 +34,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
-    <!-- Manifesto PWA -->
-    <link rel="manifest" href='data:application/manifest+json,{"name": "Gestão de Entregas", "short_name": "Entregas", "start_url": "./", "display": "standalone", "background_color": "#0A0A0B", "theme_color": "#C5A059", "icons": [{"src": "https://i.ibb.co/h7gXkZ9/delivery-app-icon.png", "sizes": "512x512", "type": "image/png"}]}'>
-
     <style>
         body { font-family: 'Inter', sans-serif; word-break: break-word; }
         body.light { background-color: #f4f5f7 !important; color: #111827 !important; }
@@ -44,7 +41,7 @@
         body.light .bg-gray-900 { background-color: #f8fafc !important; border-color: #e2e8f0 !important; color: #111827 !important; }
         body.light .bg-gray-800 { background-color: #edf2f7 !important; color: #111827 !important; }
         body.light .text-white { color: #111827 !important; }
-        body.light .text-brand-gold { color: #8C6A3C !important; } /* Versão mais escura do dourado para modo claro */
+        body.light .text-brand-gold { color: #8C6A3C !important; }
         body.light header, body.light nav { background-color: rgba(255, 255, 255, 0.85) !important; border-color: #e2e8f0 !important; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -71,8 +68,13 @@
     <div id="auth-screen" class="fixed inset-0 bg-brand-darkBg z-50 flex flex-col items-center justify-center p-5 overflow-y-auto">
         <div class="w-full max-w-sm glass-card p-6 rounded-3xl shadow-2xl space-y-5">
             <div class="text-center space-y-2">
-                <!-- NOVA LOGO INTEGRADA AQUI -->
-                <img src="https://i.ibb.co/6P6XwS3/express-logistics-gold-logo.png" alt="Gestão de Entregas Express Logo" class="w-20 mx-auto">
+                <!-- LOGO EMBLEMA EM SVG DOURADO E PRETO -->
+                <div class="w-20 h-20 mx-auto bg-gradient-to-br from-brand-gold to-yellow-700 p-0.5 rounded-2xl shadow-lg flex items-center justify-center">
+                    <div class="w-full h-full bg-brand-darkBg rounded-[14px] flex flex-col items-center justify-center p-2 text-center">
+                        <i class="fa-solid fa-box-open text-brand-gold text-2xl mb-1"></i>
+                        <span class="text-[9px] font-black tracking-widest text-brand-gold uppercase">EXPRESS</span>
+                    </div>
+                </div>
                 <h1 class="text-xl font-extrabold text-white">Gestão de Entregas</h1>
                 <p id="auth-subtitle" class="text-xs text-gray-400">Entre na sua conta para sincronizar seus dados na nuvem</p>
             </div>
@@ -117,16 +119,19 @@
         <p class="text-xs text-gray-300 font-medium">Sincronizando dados na nuvem...</p>
     </div>
 
-    <!-- CONTEÚDO PRINCIPAL DO APP (OCULTO ATÉ LOGAR) -->
+    <!-- CONTEÚDO PRINCIPAL DO APP -->
     <div id="app-wrapper" class="hidden flex-col flex-1">
 
-        <!-- MENU LATERAL DESLIZANTE (SIDEBAR) -->
+        <!-- MENU LATERAL DESLIZANTE -->
         <div id="sidebar-overlay" class="fixed inset-0 bg-black/70 z-50 hidden backdrop-blur-sm transition-opacity" onclick="toggleSidebar()"></div>
         <div id="sidebar-menu" class="fixed top-0 left-0 bottom-0 w-72 glass-card border-r border-gray-800 z-50 transform -translate-x-full flex flex-col p-4 space-y-4 shadow-2xl overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800/80 pb-3">
                 <div class="flex items-center gap-2.5">
-                    <!-- LOGO NO SIDEBAR -->
-                    <img src="https://i.ibb.co/6P6XwS3/express-logistics-gold-logo.png" alt="Logo" class="w-9 h-9">
+                    <div class="w-9 h-9 bg-gradient-to-br from-brand-gold to-yellow-700 p-0.5 rounded-xl flex items-center justify-center shrink-0">
+                        <div class="w-full h-full bg-brand-darkBg rounded-[10px] flex items-center justify-center">
+                            <i class="fa-solid fa-box-open text-brand-gold text-xs"></i>
+                        </div>
+                    </div>
                     <div class="overflow-hidden">
                         <h2 class="text-xs font-bold text-white leading-tight truncate" id="sidebar-user-name">Entregador</h2>
                         <p class="text-[9px] text-gray-400 truncate" id="sidebar-user-email">email@exemplo.com</p>
@@ -186,8 +191,11 @@
                 <button onclick="toggleSidebar()" class="text-brand-gold bg-brand-gold/10 p-2 rounded-xl hover:bg-brand-gold/20 transition text-sm border border-brand-gold/20" title="Abrir Menu">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <!-- LOGO NO HEADER -->
-                <img src="https://i.ibb.co/6P6XwS3/express-logistics-gold-logo.png" alt="Logo" class="w-8 h-8">
+                <div class="w-8 h-8 bg-gradient-to-br from-brand-gold to-yellow-700 p-0.5 rounded-xl flex items-center justify-center shrink-0">
+                    <div class="w-full h-full bg-brand-darkBg rounded-[10px] flex items-center justify-center">
+                        <i class="fa-solid fa-box-open text-brand-gold text-[10px]"></i>
+                    </div>
+                </div>
                 <div>
                     <h1 class="text-xs font-bold text-white leading-tight">Express Entregas</h1>
                     <p class="text-[9px] text-green-400 flex items-center gap-1"><i class="fa-solid fa-cloud text-[8px]"></i> Nuvem Ativa</p>
@@ -632,9 +640,6 @@
             getFirestore, doc, getDoc, setDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // =========================================================================
-        // CONFIGURAÇÃO DO SEU FIREBASE PROJECT (gestao-entregas-express)
-        // =========================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyDxzHmiJVB7-jesrzZ29ehyHv4OhmWM7LI",
             authDomain: "gestao-entregas-express.firebaseapp.com",
@@ -644,7 +649,6 @@
             appId: "1:400925486968:web:f4887aacf2937c0f0d628d",
             measurementId: "G-SX1G8YNPBG"
         };
-        // =========================================================================
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -667,7 +671,6 @@
             privacidade: localStorage.getItem('express_privacidade') === 'true'
         };
 
-        // --- CONTROLE DE AUTENTICAÇÃO ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
@@ -794,7 +797,6 @@
             return mapa[code] || 'Erro ao conectar. Verifique as chaves ou tente mais tarde.';
         }
 
-        // --- SINCRONIZAÇÃO COM FIRESTORE ---
         async function carregarDadosNuvem(uid) {
             try {
                 const docRef = doc(db, "usuarios", uid);
@@ -809,7 +811,7 @@
                     appData.meta = dadosNuvem.meta !== undefined ? dadosNuvem.meta : 4000.00;
                     appData.metaHabilitada = dadosNuvem.metaHabilitada !== undefined ? dadosNuvem.metaHabilitada : true;
                 } else {
-                    await salvarDadosNuvem(uid); // Cria documento inicial
+                    await salvarDadosNuvem(uid);
                 }
             } catch (e) {
                 console.error("Erro ao carregar dados:", e);
@@ -832,11 +834,9 @@
                 });
             } catch (e) {
                 console.error("Erro ao salvar na nuvem:", e);
-                alert("Aviso: Erro ao salvar na nuvem. Verifique sua conexão.");
             }
         }
 
-        // --- INICIALIZAÇÃO E FUNÇÕES DO APP ---
         function inicializarInterface() {
             aplicarTemaInicial();
             aplicarEstadoPrivacidade();
@@ -1322,7 +1322,6 @@
             document.getElementById('btn-submit-gasto').innerText = 'Atualizar Despesa';
             document.getElementById('btn-cancelar-gasto').classList.remove('hidden');
             
-            // Ativa botão da categoria correta
             setTimeout(() => {
                 const containerId = g.tipo === 'moto' ? 'cat-moto' : 'cat-pessoal';
                 const botoes = document.getElementById(containerId).querySelectorAll('.cat-btn');
@@ -1349,7 +1348,7 @@
             document.getElementById('gasto-data').value = new Date().toISOString().split('T')[0];
             document.getElementById('btn-submit-gasto').innerText = 'Registar Despesa';
             document.getElementById('btn-cancelar-gasto').classList.add('hidden');
-            setGastoTipo('moto'); // Reseta para moto padrão
+            setGastoTipo('moto');
         };
 
         function renderGastos() {
@@ -1489,7 +1488,6 @@
 
             await salvarDadosNuvem();
             
-            // Reseta campos
             document.getElementById('ajuste-bonus').value = "0.00";
             document.getElementById('ajuste-desconto').value = "0.00";
             
@@ -1503,7 +1501,6 @@
             const novoStatus = appData.ajustesQuinzena[chave].status === 'Pago' ? 'Pendente' : 'Pago';
             appData.ajustesQuinzena[chave].status = novoStatus;
 
-            // Atualiza status das diárias individuais correspondentes
             appData.diarias.forEach(item => {
                 if(getQuinzenaChave(item.data, item.transportadora) === chave) item.status = novoStatus;
             });
