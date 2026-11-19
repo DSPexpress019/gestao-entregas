@@ -61,7 +61,6 @@
         .btn-gradient { background: linear-gradient(135deg, #C5A059 0%, #A68045 100%); color: #0A0A0B !important; }
         .btn-gradient:hover { background: linear-gradient(135deg, #DFBC7A 0%, #C5A059 100%); }
 
-        /* Animação do Toast Flutuante */
         #toast-aviso {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateY(100px);
@@ -95,7 +94,6 @@
                 <p id="auth-subtitle" class="text-xs text-gray-400">Entre na sua conta para sincronizar seus dados na nuvem</p>
             </div>
 
-            <!-- Formulário de Login / Cadastro -->
             <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3">
                 <div id="auth-nome-group" class="hidden">
                     <label class="text-[11px] text-gray-400 block mb-1">Seu Nome</label>
@@ -687,7 +685,6 @@
             privacidade: localStorage.getItem('express_privacidade') === 'true'
         };
 
-        // Função para exibir o aviso flutuante "Salvo ✔️" em vez do alert do navegador
         function mostrarToast(mensagem = "Salvo ✔️") {
             const toast = document.getElementById('toast-aviso');
             const texto = document.getElementById('toast-texto');
@@ -865,17 +862,17 @@
 
         function inicializarInterface() {
             aplicarTemaInicial();
-            aplicarEstadoPrivacidade();
             
-            const hoje = new Date().toISOString().split('T')[0];
-            const primeiroDiaMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-            const ultimoDiaMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+            const hoje = new Date();
+            const hojeStr = hoje.toISOString().split('T')[0];
+            const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+            const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
             
             document.getElementById('filtro-data-inicio').value = primeiroDiaMes;
             document.getElementById('filtro-data-fim').value = ultimoDiaMes;
-            document.getElementById('pacote-data').value = hoje;
-            document.getElementById('gasto-data').value = hoje;
-            document.getElementById('filtro-mes-rapido').value = hoje.substring(0, 7);
+            document.getElementById('pacote-data').value = hojeStr;
+            document.getElementById('gasto-data').value = hojeStr;
+            document.getElementById('filtro-mes-rapido').value = hojeStr.substring(0, 7);
 
             document.getElementById('meta-valor-input').value = appData.meta;
             document.getElementById('meta-habilitada').checked = appData.metaHabilitada;
@@ -905,16 +902,11 @@
                 if(icon) icon.className = "fa-solid fa-eye-slash text-xs";
                 if(btn) btn.className = "p-2 text-brand-gold bg-brand-gold/10 rounded-xl text-xs border border-brand-gold/20";
                 elementos.forEach(el => {
-                    if(!el.dataset.original) el.dataset.original = el.innerText;
                     el.innerText = "R$ ••••";
                 });
             } else {
                 if(icon) icon.className = "fa-solid fa-eye text-xs";
                 if(btn) btn.className = "p-2 text-gray-300 bg-gray-800/80 rounded-xl text-xs border border-gray-700";
-                elementos.forEach(el => {
-                    if(el.dataset.original) el.innerText = el.dataset.original;
-                });
-                aplicarFiltrosGlobais();
             }
         }
 
@@ -961,6 +953,7 @@
             appData.tema = appData.tema === 'dark' ? 'light' : 'dark';
             localStorage.setItem('express_tema', appData.tema);
             aplicarTemaInicial();
+            aplicarFiltrosGlobais();
         };
 
         window.switchTab = (tabId) => {
@@ -980,10 +973,12 @@
                 currentNav.classList.remove('text-gray-400');
             }
 
-            if (tabId === 'dashboard') aplicarFiltrosGlobais();
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'pacotes') renderDiarias();
             if (tabId === 'financas') renderFinancas();
             if (tabId === 'quinzena') renderQuinzenas();
             if (tabId === 'gastos') { renderGastos(); calcularMediaCombustivelReal(); }
+            if (appData.privacidade) aplicarEstadoPrivacidade();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
@@ -991,6 +986,7 @@
             appData.meta = parseFloat(document.getElementById('meta-valor-input').value) || 4000.00;
             appData.metaHabilitada = document.getElementById('meta-habilitada').checked;
             renderDashboard();
+            if (appData.privacidade) aplicarEstadoPrivacidade();
             await salvarDadosNuvem();
             mostrarToast("Salvo ✔️");
         };
@@ -1050,17 +1046,17 @@
             renderDiarias();
             renderFinancas();
             renderGastos();
+            renderQuinzenas();
             if (appData.privacidade) aplicarEstadoPrivacidade();
         };
 
         function renderDashboard() {
             const diariasFiltradas = getDiariasFiltradas();
-            const dataInicio = document.getElementById('filtro-data-inicio').value;
-            const dataFim = document.getElementById('filtro-data-fim').value;
+            const gastosFiltrados = getGastosFiltrados();
 
             let totalGanhos = calcularTotalGeralComAjustes(diariasFiltradas);
-            let gastosMoto = appData.gastos.filter(g => g.tipo === 'moto' && (!dataInicio || g.data >= dataInicio) && (!dataFim || g.data <= dataFim)).reduce((acc, curr) => acc + curr.valor, 0);
-            let gastosPessoal = appData.gastos.filter(g => g.tipo === 'pessoal' && (!dataInicio || g.data >= dataInicio) && (!dataFim || g.data <= dataFim)).reduce((acc, curr) => acc + curr.valor, 0);
+            let gastosMoto = gastosFiltrados.filter(g => g.tipo === 'moto').reduce((acc, curr) => acc + curr.valor, 0);
+            let gastosPessoal = gastosFiltrados.filter(g => g.tipo === 'pessoal').reduce((acc, curr) => acc + curr.valor, 0);
 
             document.getElementById('dash-ganhos').innerText = `R$ ${totalGanhos.toFixed(2)}`;
             document.getElementById('dash-gastos-moto').innerText = `R$ ${gastosMoto.toFixed(2)}`;
@@ -1426,6 +1422,7 @@
             document.getElementById('res-custo').innerText = `R$ ${custo.toFixed(2)}`;
             document.getElementById('res-lucro').innerText = `R$ ${lucro.toFixed(2)}`;
             document.getElementById('res-lucro').className = lucro >= 0 ? "text-green-400 font-extrabold val-privado" : "text-red-500 font-extrabold val-privado";
+            if (appData.privacidade) aplicarEstadoPrivacidade();
         };
 
         window.alternarFiltroPendentes = () => {
@@ -1433,19 +1430,24 @@
             const btn = document.getElementById('btn-filtro-pendente');
             btn.innerText = apenasPendentesQuinzena ? "Mostrando Apenas Pendentes" : "Ver Apenas Pendentes";
             renderQuinzenas();
+            if (appData.privacidade) aplicarEstadoPrivacidade();
         };
 
         function renderQuinzenas() {
             const container = document.getElementById('tabela-quinzenal');
             container.innerHTML = '';
+
+            // Usa as diárias já filtradas por Data Início, Data Fim e Transportadora
+            const diariasFiltradas = getDiariasFiltradas();
+            const transportadoraSelecionada = document.getElementById('filtro-transportadora').value;
+
             const quinzenas = {};
-            
-            appData.diarias.forEach(item => {
+            diariasFiltradas.forEach(item => {
                 const chave = getQuinzenaChave(item.data, item.transportadora);
                 if (!quinzenas[chave]) {
                     const parts = item.data.split('-');
                     const Q = parseInt(parts[2]) <= 15 ? `1ª Q (${parts[1]}/${parts[0]})` : `2ª Q (${parts[1]}/${parts[0]})`;
-                    quinzenas[chave] = { periodo: Q, transportadora: item.transportadora, pacotes: 0, valorPacotes: 0 };
+                    quinzenas[chave] = { periodo: Q, transportadora: item.transportadora || 'Geral', pacotes: 0, valorPacotes: 0 };
                 }
                 quinzenas[chave].pacotes += item.qtd;
                 quinzenas[chave].valorPacotes += item.total;
@@ -1453,21 +1455,36 @@
 
             const selectPer = document.getElementById('ajuste-periodo');
             const selectTrans = document.getElementById('ajuste-transportadora');
-            selectPer.innerHTML = ''; selectTrans.innerHTML = '';
+            const periodoAtualSelecionado = selectPer.value;
+            const transAtualSelecionada = selectTrans.value;
+
+            selectPer.innerHTML = '';
+            selectTrans.innerHTML = '';
             
             const periodosUnicos = [...new Set(Object.values(quinzenas).map(q => q.periodo))].sort().reverse();
             if(periodosUnicos.length === 0) {
-                const m = new Date().toISOString().split('T')[0].split('-');
+                const refData = document.getElementById('filtro-data-inicio').value || new Date().toISOString().split('T')[0];
+                const m = refData.split('-');
                 periodosUnicos.push(`1ª Q (${m[1]}/${m[0]})`, `2ª Q (${m[1]}/${m[0]})`);
             }
             periodosUnicos.forEach(p => selectPer.innerHTML += `<option value="${p}">${p}</option>`);
-            appData.transportadoras.forEach(t => selectTrans.innerHTML += `<option value="${t}">${t}</option>`);
+            if (periodoAtualSelecionado && periodosUnicos.includes(periodoAtualSelecionado)) {
+                selectPer.value = periodoAtualSelecionado;
+            }
+
+            const opcoesTrans = transportadoraSelecionada ? [transportadoraSelecionada] : [...appData.transportadoras].sort();
+            opcoesTrans.forEach(t => selectTrans.innerHTML += `<option value="${t}">${t}</option>`);
+            if (!transportadoraSelecionada && transAtualSelecionada && opcoesTrans.includes(transAtualSelecionada)) {
+                selectTrans.value = transAtualSelecionada;
+            }
 
             let chaves = Object.keys(quinzenas).sort().reverse();
-            if (apenasPendentesQuinzena) chaves = chaves.filter(c => (appData.ajustesQuinzena[c]?.status || 'Pendente') !== 'Pago');
+            if (apenasPendentesQuinzena) {
+                chaves = chaves.filter(c => (appData.ajustesQuinzena[c]?.status || 'Pendente') !== 'Pago');
+            }
 
             if (chaves.length === 0) {
-                container.innerHTML = `<div class="p-4 text-center text-gray-500 text-xs">Nenhum fechamento quinzenal encontrado.</div>`;
+                container.innerHTML = `<div class="p-4 text-center text-gray-500 text-xs">Nenhum fechamento quinzenal encontrado para o filtro atual.</div>`;
                 return;
             }
 
@@ -1487,10 +1504,10 @@
                             <div class="text-xs font-extrabold text-green-400 val-privado">Líquido: R$ ${totalLiquido.toFixed(2)}</div>
                         </div>
                         <div class="flex items-center gap-1.5 self-end sm:self-center shrink-0">
-                            <button onclick="alternarStatusQuinzena('${chave}')" class="px-2.5 py-1 rounded-xl text-[10px] font-bold ${ajuste.status === 'Pago' ? 'bg-green-500/20 text-green-400 border border-green-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'}">
+                            <button onclick="alternarStatusQuinzena('${chave.replace(/'/g, "\\'")}')" class="px-2.5 py-1 rounded-xl text-[10px] font-bold ${ajuste.status === 'Pago' ? 'bg-green-500/20 text-green-400 border border-green-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'}">
                                 ${ajuste.status}
                             </button>
-                            <button onclick="enviarResumoQuinzenaWhatsApp('${q.periodo}', '${q.transportadora}', ${q.pacotes}, ${q.valorPacotes}, ${ajuste.bonus || 0}, ${ajuste.desconto || 0}, ${totalLiquido})" class="p-1.5 text-green-400 hover:bg-green-900 rounded-lg"><i class="fa-brands fa-whatsapp text-sm"></i></button>
+                            <button onclick="enviarResumoQuinzenaWhatsApp('${q.periodo.replace(/'/g, "\\'")}', '${q.transportadora.replace(/'/g, "\\'")}', ${q.pacotes}, ${q.valorPacotes}, ${ajuste.bonus || 0}, ${ajuste.desconto || 0}, ${totalLiquido})" class="p-1.5 text-green-400 hover:bg-green-900 rounded-lg"><i class="fa-brands fa-whatsapp text-sm"></i></button>
                         </div>
                     </div>`;
             });
@@ -1518,7 +1535,6 @@
             document.getElementById('ajuste-bonus').value = "0.00";
             document.getElementById('ajuste-desconto').value = "0.00";
             
-            renderQuinzenas();
             aplicarFiltrosGlobais();
             mostrarToast("Salvo ✔️");
         };
@@ -1533,27 +1549,36 @@
             });
 
             await salvarDadosNuvem();
-            renderQuinzenas();
             aplicarFiltrosGlobais();
         };
 
         function atualizarSelectsTransportadoras() {
             const selectFiltro = document.getElementById('filtro-transportadora');
             const selectForm = document.getElementById('pacote-transportadora');
+            const filtroAtual = selectFiltro.value;
+            const formAtual = selectForm.value;
+
             selectFiltro.innerHTML = '<option value="">Todas</option>';
             selectForm.innerHTML = '';
             
-            appData.transportadoras.sort().forEach(t => {
+            [...appData.transportadoras].sort().forEach(t => {
                 selectFiltro.innerHTML += `<option value="${t}">${t}</option>`;
                 selectForm.innerHTML += `<option value="${t}">${t}</option>`;
             });
+
+            if (filtroAtual && [...selectFiltro.options].some(o => o.value === filtroAtual)) {
+                selectFiltro.value = filtroAtual;
+            }
+            if (formAtual && [...selectForm.options].some(o => o.value === formAtual)) {
+                selectForm.value = formAtual;
+            }
         }
 
         window.abrirModalTransportadoras = () => {
             document.getElementById('modal-transportadoras').classList.remove('hidden');
             const container = document.getElementById('lista-transportadoras-modal');
             container.innerHTML = '';
-            appData.transportadoras.sort().forEach((t) => {
+            [...appData.transportadoras].sort().forEach((t) => {
                 container.innerHTML += `
                     <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800 text-xs">
                         <span class="text-white font-medium truncate mr-2">${t}</span>
@@ -1575,6 +1600,7 @@
                 appData.transportadoras.push(nome);
                 input.value = '';
                 await salvarDadosNuvem();
+                atualizarSelectsTransportadoras();
                 abrirModalTransportadoras();
                 mostrarToast("Salvo ✔️");
             } else if (appData.transportadoras.includes(nome)) {
@@ -1587,6 +1613,7 @@
             if(confirm(`Tem certeza que deseja excluir "${nome}"? As entregas vinculadas a ela não serão apagadas, mas perderão a referência.`)) {
                 appData.transportadoras = appData.transportadoras.filter(t => t !== nome);
                 await salvarDadosNuvem();
+                atualizarSelectsTransportadoras();
                 abrirModalTransportadoras();
             }
         };
